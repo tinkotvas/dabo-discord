@@ -64,8 +64,8 @@ class Botmaestro {
             try {
               let operator = command.split(" ")[0];
               switch (operator) {
+                case "give":
                 case "take":
-                case "add":
                   let amount = command.split(" ")[1];
                   amount = parseInt(amount);
                   if (amount > this.dailyDkpVal) {
@@ -87,11 +87,11 @@ class Botmaestro {
                   if (targetUser == user) {
                     this.bot.sendMessage({
                       to: channelID,
-                      message: `\`\`\`diff\n- You can't give or take from your own DKP\`\`\``
+                      message: `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``
                     });
                     break;
                   }
-                  this.addAndTakeDKP(
+                  this.giveAndTakeDKP(
                     user,
                     targetUser,
                     amount,
@@ -106,19 +106,12 @@ class Botmaestro {
                     }
                     let jsonData = JSON.parse(data);
                     let users = jsonData.users;
-                    let message = "is announcing the DKP list.\n```css\n";
-
+                    let message = "```css\n";
                     let tableUsers = [["User", "DKP"]];
                     for (let user of users) {
                       tableUsers.push([user.username, user.dkp]);
                     }
-
-                    let msgg = table(tableUsers, { align: ["l", "r"] });
-                    message += msgg + "```";
-                    console.log(msgg);
-                    // for (let user of users) {
-                    //   message += `${user.dkp}\t\t|\t\t${user.username}\n`;
-                    // }
+                    message += table(tableUsers, { align: ["l", "r"] }) + "```";
                     this.bot.sendMessage({
                       to: channelID,
                       message: message
@@ -155,14 +148,13 @@ class Botmaestro {
         let roll = Math.floor(Math.random() * 100) + 1;
         this.bot.sendMessage({
           to: channelID,
-          message: `${user} rolled ${roll}`
+          message: `\`\`\`xl\n${user} rolled ${roll}\`\`\``
         });
         break;
-      // Just add any case commands if you want to..
     }
   }
 
-  addAndTakeDKP(currentUser, username, amount, modifier, channelID) {
+  giveAndTakeDKP(currentUser, username, amount, modifier, channelID) {
     fs.readFile("dkp.json", (err, data) => {
       if (err) {
         throw err;
@@ -212,16 +204,16 @@ class Botmaestro {
 
         if (users[userIndex].bank.dkp >= amount) {
           users[userIndex].bank.dkp -= amount;
-          if (modifier == "add") {
+          if (modifier == "give") {
             users[targetUserIndex].dkp += amount;
-            message = `Added ${amount} DKP to `;
+            message = `\`\`\`diff\n+ Gave ${amount} DKP to `;
           } else if (modifier == "take") {
             users[targetUserIndex].dkp -= amount;
-            message = `Took ${amount} DKP from `;
+            message = `\`\`\`diff\n+ Took ${amount} DKP from `;
           }
           message += `${username}, you now have ${
             users[userIndex].bank.dkp
-          } more DKP to give or take today.`;
+          } more DKP to give or take today.\`\`\``;
           this.dkpJsonSave(jsonData);
         } else {
           message = `\`\`\`diff\n- You don't have enough DKP. Remaining: ${
@@ -244,16 +236,18 @@ class Botmaestro {
   }
 
   templateDkpCommands() {
-    let msg = `is, yet again, telling you the commands
-\`\`\`diff\ncommands:
+    let msg = `\`\`\`diff\n
+You're allowed to give and take a total of ${this.dailyDkpVal} DKP every 24-hour period.
+
+commands:
 !dkp - show dkp commands
-!dkp list - List all users and their DKP
-!dkp add <amount> <user> - add DKP to user (max ${this.dailyDkpVal})
-!dkp take <amount> <user> - take DKP from user (max ${this.dailyDkpVal})
+!dkp list - list all users and their DKP
+!dkp give <amount> <user> - give DKP to a user
+!dkp take <amount> <user> - take DKP from a user
 
 examples:
-!dkp add 2 Tin
-!dkp take 2 Tin\`\`\``;
+!dkp give 10 Tin
+!dkp take 10 Tin\`\`\``;
     return msg;
   }
 }
