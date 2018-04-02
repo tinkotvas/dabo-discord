@@ -1,0 +1,11 @@
+{
+  "name": "botmaestro-dkp",
+  "version": "0.0.1",
+  "description": "Botmaestro, the DKP bot.",
+  "main": "bot.js",
+  "author": "Tin Kotvas",
+  "dependencies": {
+    "discord.io": "github:woor/discord.io#gateway_v6",
+    "npm": "^5.8.0"
+  }
+}
