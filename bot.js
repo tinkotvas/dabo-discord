@@ -56,9 +56,15 @@ class Fembot {
 
   giveOrTakeValidator(user, channelID, command) {
     let botMessage;
-    let doContinue = true;
+
     let operator = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
+    let targetUser = command.split(" ")[2];
+    let num = 3;
+    while (command.split(" ")[num]) {
+      targetUser += ` ${command.split(" ")[num]}`;
+      num += 1;
+    }
 
     //if you dont have nough dkp points
     if (amount > this.dailyDkpVal) {
@@ -72,13 +78,6 @@ class Fembot {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
       this.sendMessage(channelID, botMessage);
       return;
-    }
-
-    let targetUser = command.split(" ")[2];
-    let num = 3;
-    while (command.split(" ")[num]) {
-      targetUser += ` ${command.split(" ")[num]}`;
-      num += 1;
     }
 
     this.giveAndTakeDKP(user, targetUser, amount, operator, channelID);
@@ -97,6 +96,9 @@ class Fembot {
         this.dkpList(channelID);
       },
       give: () => {
+        this.giveOrTakeValidator(user, channelID, fullCommand);
+      },
+      take: () => {
         this.giveOrTakeValidator(user, channelID, fullCommand);
       },
       default: () => {
