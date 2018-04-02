@@ -5,17 +5,12 @@ const table = require("text-table");
 
 class Botmaestro {
   constructor() {
-    this.bot;
-    this.currMsg;
-    this.dailyDkpVal = 100;
-    this.initBot();
-  }
-
-  initBot() {
     this.bot = new Discord.Client({
       token: auth.token,
       autorun: true
     });
+    this.currMsg;
+    this.dailyDkpVal = 100;
     this.initReady();
   }
 
@@ -45,12 +40,12 @@ class Botmaestro {
           this.runExclamationCommands(user, channelID, message);
         }
 
-        if (message.match(/de(j|)an/gi)) {
-          this.bot.sendMessage({
-            to: channelID,
-            message: `<:de:383390121577152512><:de:383390121577152512> ${user} sa det magiska ordet <:de:383390121577152512><:de:383390121577152512>`
-          });
-        }
+        // if (message.match(/de(j|)an/gi)) {
+        //   this.bot.sendMessage({
+        //     to: channelID,
+        //     message: `<:de:383390121577152512><:de:383390121577152512> ${user} sa det magiska ordet <:de:383390121577152512><:de:383390121577152512>`
+        //   });
+        // }
 
         if (message.substring(0, 4).match(/!dkp/i)) {
           let command = message.split("!dkp ")[1];
