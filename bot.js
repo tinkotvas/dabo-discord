@@ -3,137 +3,127 @@ const auth = require("./auth.json");
 const fs = require("fs");
 const table = require("text-table");
 
-class Botmaestro {
+class Fembot {
   constructor() {
     this.bot = new Discord.Client({
       token: auth.token,
       autorun: true
     });
-    this.currMsg;
+
     this.dailyDkpVal = 100;
-    this.initReady();
+    this.init();
   }
 
-  initReady() {
+  async sendMessage(channelID, message) {
+    this.bot.sendMessage({
+      to: channelID,
+      message: message
+    });
+  }
+
+  init() {
     this.bot.on("ready", evt => {
       console.log("Connected");
       console.log("Logged in as: ");
       console.log(this.bot.username + " - (" + this.bot.id + ")");
-      this.initMessage();
+      this.registerOnMessage();
     });
   }
 
-  async initMessage() {
+  async registerOnMessage() {
     this.bot.on("message", async (user, userID, channelID, message, evt) => {
-      // Our bot needs to know if it will execute a command
-      // It will listen for messages that will start with `!`
-      if (user != "botmaestro") {
-        this.currMsg = {
-          user,
-          userID,
-          channelID,
-          message,
-          evt
+      if (message.substring(0, 1) == "!" && user != "fembot") {
+        let command = message.substring(1).split(" ");
+
+        const commands = {
+          roll: () => {
+            this.rollDice(user, channelID, message);
+          },
+          dkp: () => {
+            this.runDkpCommand(user, channelID, message);
+          },
+          default: () => {
+            console.log("DEFAULT");
+            this.sendMessage(channelID, "Wrong command");
+          }
         };
 
-        if (message.substring(0, 1) == "!") {
-          this.runExclamationCommands(user, channelID, message);
-        }
-
-        // if (message.match(/de(j|)an/gi)) {
-        //   this.bot.sendMessage({
-        //     to: channelID,
-        //     message: `<:de:383390121577152512><:de:383390121577152512> ${user} sa det magiska ordet <:de:383390121577152512><:de:383390121577152512>`
-        //   });
-        // }
-
-        if (message.substring(0, 4).match(/!dkp/i)) {
-          let command = message.split("!dkp ")[1];
-          if (typeof command == "undefined") {
-            let message = await this.templateDkpCommands();
-            this.bot.sendMessage({
-              to: channelID,
-              message: message
-            });
-          } else {
-            try {
-              let operator = command.split(" ")[0];
-              switch (operator) {
-                case "give":
-                case "take":
-                  let amount = command.split(" ")[1];
-                  amount = parseInt(amount);
-                  if (amount > this.dailyDkpVal) {
-                    this.bot.sendMessage({
-                      to: channelID,
-                      message: `\`\`\`diff\n- Too much DKP, max ${
-                        this.dailyDkpVal
-                      }\`\`\``
-                    });
-                    break;
-                  }
-
-                  let targetUser = command.split(" ")[2];
-                  let num = 3;
-                  while (command.split(" ")[num]) {
-                    targetUser += ` ${command.split(" ")[num]}`;
-                    num += 1;
-                  }
-                  if (targetUser == user) {
-                    this.bot.sendMessage({
-                      to: channelID,
-                      message: `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``
-                    });
-                    break;
-                  }
-                  this.giveAndTakeDKP(
-                    user,
-                    targetUser,
-                    amount,
-                    operator,
-                    channelID
-                  );
-                  break;
-                case "list":
-                  fs.readFile("dkp.json", (err, data) => {
-                    if (err) {
-                      throw err;
-                    }
-                    let jsonData = JSON.parse(data);
-                    let users = jsonData.users;
-                    let message = "```css\n";
-                    let tableUsers = [["User", "DKP"]];
-                    for (let user of users) {
-                      tableUsers.push([user.username, user.dkp]);
-                    }
-                    message += table(tableUsers, { align: ["l", "r"] }) + "```";
-                    this.bot.sendMessage({
-                      to: channelID,
-                      message: message
-                    });
-                  });
-                  break;
-                default:
-                  this.invalidCommand(channelID);
-                  break;
-              }
-            } catch (e) {
-              this.invalidCommand(channelID);
-            }
-          }
-        }
+        typeof commands[command] == "function"
+          ? commands[command]()
+          : commands["default"]();
       }
     });
   }
 
-  invalidCommand(channelID) {
-    this.bot.sendMessage({
-      to: channelID,
-      message: `\`\`\`diff\n- Invalid command. Type !dkp for commands\`\`\``
-    });
+  runDkpCommand(user, channelID, message) {
+    let botMessage;
+    let command = message.split("!dkp ")[1];
+    if (typeof command == "undefined") {
+      let message = this.templateDkpCommands();
+      this.sendMessage(channelID, message);
+    } else {
+      try {
+        let operator = command.split(" ")[0];
+        switch (operator) {
+          case "give":
+          case "take":
+            let amount = command.split(" ")[1];
+            amount = parseInt(amount);
+            if (amount > this.dailyDkpVal) {
+              botMessage = `\`\`\`diff\n- Too much DKP, max ${
+                this.dailyDkpVal
+              }\`\`\``;
+              this.sendMessage(channelID, botMessage);
+              break;
+            }
+
+            let targetUser = command.split(" ")[2];
+            let num = 3;
+            while (command.split(" ")[num]) {
+              targetUser += ` ${command.split(" ")[num]}`;
+              num += 1;
+            }
+
+            if (targetUser == user) {
+              botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
+              this.sendMessage(channelID, botMessage);
+              break;
+            }
+            this.giveAndTakeDKP(user, targetUser, amount, operator, channelID);
+            break;
+          case "list":
+            fs.readFile("dkp.json", (err, data) => {
+              if (err) {
+                throw err;
+              }
+              let jsonData = JSON.parse(data);
+              let users = jsonData.users;
+              let message = "```css\n";
+              let tableUsers = [["User", "DKP"]];
+              for (let user of users) {
+                tableUsers.push([user.username, user.dkp]);
+              }
+              message += table(tableUsers, { align: ["l", "r"] }) + "```";
+              this.sendMessage(channelID, message);
+            });
+            break;
+          default:
+            this.invalidCommand(channelID);
+            break;
+        }
+      } catch (e) {
+        this.invalidCommand(channelID);
+      }
+    }
   }
 
-  runExclamationCommands(user, channelID, message) {
+  invalidCommand(channelID) {
+    let botMessage = `\`\`\`diff\n- Invalid command. Type !dkp for commands\`\`\``;
+    this.sendMessage(channelID, message);
+  }
+
+  rollDice(user, channelID, message) {
+    let botMessage;
     var args = message.substring(1).split(" ");
     var cmd = args[0];
 
@@ -141,10 +131,8 @@ class Botmaestro {
     switch (cmd) {
       case "roll":
         let roll = Math.floor(Math.random() * 100) + 1;
-        this.bot.sendMessage({
-          to: channelID,
-          message: `\`\`\`xl\n${user} rolled ${roll}\`\`\``
-        });
+        botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
+        this.sendMessage(channelID, botMessage);
         break;
     }
   }
@@ -188,8 +176,6 @@ class Botmaestro {
       let message = "";
       if (foundUser) {
         let now = new Date();
-        console.log("userIndex", users[userIndex].bank.dkp);
-        console.log("targetUserIndex", targetUserIndex);
         if (
           Math.abs(now - new Date(users[userIndex].bank.lastUpdate)) > 86400000
         ) {
@@ -218,10 +204,7 @@ class Botmaestro {
       } else {
         message = `\`\`\`diff\n- Did not find the username\`\`\``;
       }
-      this.bot.sendMessage({
-        to: channelID,
-        message: message
-      });
+      this.sendMessage(channelID, message);
     });
   }
 
@@ -232,7 +215,9 @@ class Botmaestro {
 
   templateDkpCommands() {
     let msg = `\`\`\`diff\n
-You're allowed to give and take a total of ${this.dailyDkpVal} DKP every 24-hour period.
+You're allowed to give and take a total of ${
+      this.dailyDkpVal
+    } DKP every 24-hour period.
 
 commands:
 !dkp - show dkp commands
@@ -247,4 +232,4 @@ examples:
   }
 }
 
-let bot = new Botmaestro();
+let bot = new Fembot();
