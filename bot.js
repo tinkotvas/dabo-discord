@@ -7,6 +7,15 @@ class Botmaestro {
     let bot;
     let currMsg;
     this.initBot();
+
+    let today = new Date();
+    let tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 2);
+
+    console.log(today);
+    console.log(tomorrow);
+
+    console.log(tomorrow - today);
   }
 
   initBot() {
@@ -66,10 +75,10 @@ class Botmaestro {
                 case "add":
                   let dkpamount = dkpcmd.split(" ")[1];
                   dkpamount = parseInt(dkpamount);
-                  if (dkpamount > 20) {
+                  if (dkpamount > 10) {
                     this.bot.sendMessage({
                       to: channelID,
-                      message: `Too much DKP, max 20`
+                      message: `Too much DKP, max 10`
                     });
                     break;
                   }
@@ -156,7 +165,8 @@ class Botmaestro {
             foundUser = true;
             users.push({
               username: this.bot.users[user].username,
-              dkp: 0
+              dkp: 0,
+              bank: { lastUpdate: new Date(), dkp: 1000 }
             });
             break;
           }
@@ -166,14 +176,28 @@ class Botmaestro {
 
       let message = "";
       if (foundUser) {
-        if (modifier == "add") {
-          users[userIndex].dkp += amount;
-          message = `Added ${amount} DKP to ${username}`;
-        } else if (modifier == "remove") {
-          users[userIndex].dkp -= amount;
-          message = `Removed ${amount} DKP to ${username}`;
+        let now = new Date();
+        if (
+          Math.abs(now - new Date(users[userIndex].bank.lastUpdate)) > 86400000
+        ) {
+          users[userIndex].bank.dkp = 10;
+          users[userIndex].bank.lastUpdate = now;
         }
-        this.dkpJsonSave(jsonData);
+
+        if (users[userIndex].bank.dkp > amount) {
+          if (modifier == "add") {
+            users[userIndex].dkp += amount;
+            message = `Added ${amount} DKP to ${username}`;
+          } else if (modifier == "remove") {
+            users[userIndex].dkp -= amount;
+            message = `Removed ${amount} DKP to ${username}`;
+          }
+          this.dkpJsonSave(jsonData);
+        } else {
+          message = `You don't have enough DKP\nRemaining: ${
+            users[userIndex].bank.dkp
+          }`;
+        }
       } else {
         message = `Did not find the username`;
       }
@@ -195,8 +219,8 @@ class Botmaestro {
     commands:
     \`!dkp\` - \`show dkp commands\`
     \`!dkp list\` - \`List all users and their dkp\`
-    \`!dkp add <amount> <user>\` - \`add dkp to user (max 20)\`
-    \`!dkp remove <amount> <user>\` - \`remove dkp from user (max 20)\`
+    \`!dkp add <amount> <user>\` - \`add dkp to user (max 10)\`
+    \`!dkp remove <amount> <user>\` - \`remove dkp from user (max 10)\`
   
     examples:
     \`!dkp add 2 Tin\`
