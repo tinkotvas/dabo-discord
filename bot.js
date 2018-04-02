@@ -1,21 +1,14 @@
-var Discord = require("discord.io");
-var auth = require("./auth.json");
-var fs = require("fs");
+const Discord = require("discord.io");
+const auth = require("./auth.json");
+const fs = require("fs");
+const table = require("text-table");
 
 class Botmaestro {
   constructor() {
-    let bot;
-    let currMsg;
+    this.bot;
+    this.currMsg;
+    this.dailyDkpVal = 100;
     this.initBot();
-
-    let today = new Date();
-    let tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 2);
-
-    console.log(today);
-    console.log(tomorrow);
-
-    console.log(tomorrow - today);
   }
 
   initBot() {
@@ -47,6 +40,7 @@ class Botmaestro {
           message,
           evt
         };
+
         if (message.substring(0, 1) == "!") {
           this.runExclamationCommands(user, channelID, message);
         }
@@ -59,9 +53,8 @@ class Botmaestro {
         }
 
         if (message.substring(0, 4).match(/!dkp/i)) {
-          let dkpcmd = message.split("!dkp ")[1];
-
-          if (typeof dkpcmd == "undefined") {
+          let command = message.split("!dkp ")[1];
+          if (typeof command == "undefined") {
             let message = await this.templateDkpCommands();
             this.bot.sendMessage({
               to: channelID,
@@ -69,28 +62,43 @@ class Botmaestro {
             });
           } else {
             try {
-              let dkpoperator = dkpcmd.split(" ")[0];
-              switch (dkpoperator) {
-                case "remove":
+              let operator = command.split(" ")[0];
+              switch (operator) {
+                case "take":
                 case "add":
-                  let dkpamount = dkpcmd.split(" ")[1];
-                  dkpamount = parseInt(dkpamount);
-                  if (dkpamount > 10) {
+                  let amount = command.split(" ")[1];
+                  amount = parseInt(amount);
+                  if (amount > this.dailyDkpVal) {
                     this.bot.sendMessage({
                       to: channelID,
-                      message: `Too much DKP, max 10`
+                      message: `\`\`\`diff\n- Too much DKP, max ${
+                        this.dailyDkpVal
+                      }\`\`\``
                     });
                     break;
                   }
-                  let dkpuser = dkpcmd.split(" ")[2];
+
+                  let targetUser = command.split(" ")[2];
                   let num = 3;
-                  while (dkpcmd.split(" ")[num]) {
-                    dkpuser += ` ${dkpcmd.split(" ")[num]}`;
+                  while (command.split(" ")[num]) {
+                    targetUser += ` ${command.split(" ")[num]}`;
                     num += 1;
                   }
-                  this.dkpAddRemove(dkpuser, dkpamount, dkpoperator, channelID);
+                  if (targetUser == user) {
+                    this.bot.sendMessage({
+                      to: channelID,
+                      message: `\`\`\`diff\n- You can't give or take from your own DKP\`\`\``
+                    });
+                    break;
+                  }
+                  this.addAndTakeDKP(
+                    user,
+                    targetUser,
+                    amount,
+                    operator,
+                    channelID
+                  );
                   break;
-
                 case "list":
                   fs.readFile("dkp.json", (err, data) => {
                     if (err) {
@@ -98,14 +106,19 @@ class Botmaestro {
                     }
                     let jsonData = JSON.parse(data);
                     let users = jsonData.users;
+                    let message = "is announcing the DKP list.\n```css\n";
 
-                    let message =
-                      "is announcing the DKP list.\n\nDKP | Username\n\n";
-
+                    let tableUsers = [["User", "DKP"]];
                     for (let user of users) {
-                      message += `${user.dkp} | ${user.username}\n`;
+                      tableUsers.push([user.username, user.dkp]);
                     }
 
+                    let msgg = table(tableUsers, { align: ["l", "r"] });
+                    message += msgg + "```";
+                    console.log(msgg);
+                    // for (let user of users) {
+                    //   message += `${user.dkp}\t\t|\t\t${user.username}\n`;
+                    // }
                     this.bot.sendMessage({
                       to: channelID,
                       message: message
@@ -128,7 +141,7 @@ class Botmaestro {
   invalidCommand(channelID) {
     this.bot.sendMessage({
       to: channelID,
-      message: `Invalid command. Type !dkp for commands`
+      message: `\`\`\`diff\n- Invalid command. Type !dkp for commands\`\`\``
     });
   }
 
@@ -149,15 +162,26 @@ class Botmaestro {
     }
   }
 
-  dkpAddRemove(username, amount, modifier, channelID) {
+  addAndTakeDKP(currentUser, username, amount, modifier, channelID) {
     fs.readFile("dkp.json", (err, data) => {
       if (err) {
         throw err;
       }
       let jsonData = JSON.parse(data);
       let users = jsonData.users;
-      let userIndex = users.findIndex(user => user.username == username);
-      let foundUser = userIndex == -1 ? false : true;
+      let targetUserIndex = users.findIndex(user => user.username == username);
+      let userIndex = users.findIndex(user => user.username == currentUser);
+      let foundUser = targetUserIndex == -1 ? false : true;
+
+      //if current user is missing
+      if (userIndex == -1) {
+        users.push({
+          username: currentUser,
+          dkp: 0,
+          bank: { lastUpdate: new Date(), dkp: 100 }
+        });
+        userIndex = users.length - 1;
+      }
 
       if (!foundUser) {
         for (let user in this.bot.users) {
@@ -166,40 +190,46 @@ class Botmaestro {
             users.push({
               username: this.bot.users[user].username,
               dkp: 0,
-              bank: { lastUpdate: new Date(), dkp: 1000 }
+              bank: { lastUpdate: new Date(), dkp: 100 }
             });
             break;
           }
         }
-        userIndex = users.length - 1;
+        targetUserIndex = users.length - 1;
       }
 
       let message = "";
       if (foundUser) {
         let now = new Date();
+        console.log("userIndex", users[userIndex].bank.dkp);
+        console.log("targetUserIndex", targetUserIndex);
         if (
           Math.abs(now - new Date(users[userIndex].bank.lastUpdate)) > 86400000
         ) {
-          users[userIndex].bank.dkp = 10;
+          users[userIndex].bank.dkp = this.dailyDkpVal;
           users[userIndex].bank.lastUpdate = now;
         }
 
-        if (users[userIndex].bank.dkp > amount) {
+        if (users[userIndex].bank.dkp >= amount) {
+          users[userIndex].bank.dkp -= amount;
           if (modifier == "add") {
-            users[userIndex].dkp += amount;
-            message = `Added ${amount} DKP to ${username}`;
-          } else if (modifier == "remove") {
-            users[userIndex].dkp -= amount;
-            message = `Removed ${amount} DKP to ${username}`;
+            users[targetUserIndex].dkp += amount;
+            message = `Added ${amount} DKP to `;
+          } else if (modifier == "take") {
+            users[targetUserIndex].dkp -= amount;
+            message = `Took ${amount} DKP from `;
           }
+          message += `${username}, you now have ${
+            users[userIndex].bank.dkp
+          } more DKP to give or take today.`;
           this.dkpJsonSave(jsonData);
         } else {
-          message = `You don't have enough DKP\nRemaining: ${
+          message = `\`\`\`diff\n- You don't have enough DKP. Remaining: ${
             users[userIndex].bank.dkp
-          }`;
+          }\`\`\``;
         }
       } else {
-        message = `Did not find the username`;
+        message = `\`\`\`diff\n- Did not find the username\`\`\``;
       }
       this.bot.sendMessage({
         to: channelID,
@@ -215,17 +245,15 @@ class Botmaestro {
 
   templateDkpCommands() {
     let msg = `is, yet again, telling you the commands
-  
-    commands:
-    \`!dkp\` - \`show dkp commands\`
-    \`!dkp list\` - \`List all users and their dkp\`
-    \`!dkp add <amount> <user>\` - \`add dkp to user (max 10)\`
-    \`!dkp remove <amount> <user>\` - \`remove dkp from user (max 10)\`
-  
-    examples:
-    \`!dkp add 2 Tin\`
-    \`!dkp remove 2 Tin\``;
+\`\`\`diff\ncommands:
+!dkp - show dkp commands
+!dkp list - List all users and their DKP
+!dkp add <amount> <user> - add DKP to user (max ${this.dailyDkpVal})
+!dkp take <amount> <user> - take DKP from user (max ${this.dailyDkpVal})
 
+examples:
+!dkp add 2 Tin
+!dkp take 2 Tin\`\`\``;
     return msg;
   }
 }
