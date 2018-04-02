@@ -30,21 +30,20 @@ class Fembot {
     });
   }
 
-  async registerOnMessage() {
+  registerOnMessage() {
     this.bot.on("message", async (user, userID, channelID, message, evt) => {
       if (message.substring(0, 1) == "!" && user != "fembot") {
-        let command = message.substring(1).split(" ");
+        let command = message.substring(1).split(" ")[0];
 
         const commands = {
           roll: () => {
             this.rollDice(user, channelID, message);
           },
           dkp: () => {
-            this.runDkpCommand(user, channelID, message);
+            this.dkpCommand(user, channelID, message);
           },
           default: () => {
-            console.log("DEFAULT");
-            this.sendMessage(channelID, "Wrong command");
+            this.sendMessage(channelID, "```diff\n- Invalid command");
           }
         };
 
@@ -55,71 +54,82 @@ class Fembot {
     });
   }
 
-  runDkpCommand(user, channelID, message) {
+  giveOrTakeValidator(user, channelID, command) {
     let botMessage;
-    let command = message.split("!dkp ")[1];
-    if (typeof command == "undefined") {
-      let message = this.templateDkpCommands();
-      this.sendMessage(channelID, message);
-    } else {
-      try {
-        let operator = command.split(" ")[0];
-        switch (operator) {
-          case "give":
-          case "take":
-            let amount = command.split(" ")[1];
-            amount = parseInt(amount);
-            if (amount > this.dailyDkpVal) {
-              botMessage = `\`\`\`diff\n- Too much DKP, max ${
-                this.dailyDkpVal
-              }\`\`\``;
-              this.sendMessage(channelID, botMessage);
-              break;
-            }
+    let doContinue = true;
+    let operator = command.split(" ")[0];
+    let amount = parseInt(command.split(" ")[1]);
 
-            let targetUser = command.split(" ")[2];
-            let num = 3;
-            while (command.split(" ")[num]) {
-              targetUser += ` ${command.split(" ")[num]}`;
-              num += 1;
-            }
-
-            if (targetUser == user) {
-              botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
-              this.sendMessage(channelID, botMessage);
-              break;
-            }
-            this.giveAndTakeDKP(user, targetUser, amount, operator, channelID);
-            break;
-          case "list":
-            fs.readFile("dkp.json", (err, data) => {
-              if (err) {
-                throw err;
-              }
-              let jsonData = JSON.parse(data);
-              let users = jsonData.users;
-              let message = "```css\n";
-              let tableUsers = [["User", "DKP"]];
-              for (let user of users) {
-                tableUsers.push([user.username, user.dkp]);
-              }
-              message += table(tableUsers, { align: ["l", "r"] }) + "```";
-              this.sendMessage(channelID, message);
-            });
-            break;
-          default:
-            this.invalidCommand(channelID);
-            break;
-        }
-      } catch (e) {
-        this.invalidCommand(channelID);
-      }
+    //if you dont have nough dkp points
+    if (amount > this.dailyDkpVal) {
+      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.dailyDkpVal}\`\`\``;
+      this.sendMessage(channelID, botMessage);
+      return;
     }
+
+    //if trying to give points to yourself
+    if (targetUser == user) {
+      botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
+      this.sendMessage(channelID, botMessage);
+      return;
+    }
+
+    let targetUser = command.split(" ")[2];
+    let num = 3;
+    while (command.split(" ")[num]) {
+      targetUser += ` ${command.split(" ")[num]}`;
+      num += 1;
+    }
+
+    this.giveAndTakeDKP(user, targetUser, amount, operator, channelID);
+  }
+
+  dkpCommand(user, channelID, message) {
+    let botMessage;
+    let fullCommand = message.split("!dkp ")[1];
+    let command = message.split("!dkp ")[1];
+    if (typeof fullCommand != "undefined") {
+      command = fullCommand.split(" ")[0];
+    }
+
+    const commands = {
+      list: () => {
+        this.dkpList(channelID);
+      },
+      give: () => {
+        this.giveOrTakeValidator(user, channelID, fullCommand);
+      },
+      default: () => {
+        botMessage = this.templateDkpCommands();
+        this.sendMessage(channelID, botMessage);
+      }
+    };
+
+    typeof commands[command] == "function"
+      ? commands[command]()
+      : commands["default"]();
+  }
+
+  dkpList(channelID) {
+    fs.readFile("dkp.json", (err, data) => {
+      if (err) {
+        throw err;
+      }
+      let jsonData = JSON.parse(data);
+      let users = jsonData.users;
+      let message = "```css\n";
+      let tableUsers = [["User", "DKP"]];
+      for (let user of users) {
+        tableUsers.push([user.username, user.dkp]);
+      }
+      message += table(tableUsers, { align: ["l", "r"] }) + "```";
+      this.sendMessage(channelID, message);
+    });
   }
 
   invalidCommand(channelID) {
     let botMessage = `\`\`\`diff\n- Invalid command. Type !dkp for commands\`\`\``;
-    this.sendMessage(channelID, message);
+    this.sendMessage(channelID, botMessage);
   }
 
   rollDice(user, channelID, message) {
