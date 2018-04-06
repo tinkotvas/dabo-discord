@@ -8,5 +8,9 @@
     "discord.io": "github:woor/discord.io#gateway_v6",
     "npm": "^5.8.0",
     "text-table": "^0.2.0"
+  },
+  "nodemonConfig": {
+    "ignore": ["*.json"],
+    "delay": "2500"
   }
 }

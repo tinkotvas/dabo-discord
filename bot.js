@@ -10,14 +10,21 @@ class Fembot {
       autorun: true
     });
 
-    this.dailyDkpVal = 100;
+    fs.readFile("dkp.json", (err, data) => {
+      if (err) {
+        throw err;
+      }
+      this.dkpScores = JSON.parse(data);
+    });
+
+    this.maxDailyDKP = 100;
     this.init();
   }
 
-  async sendMessage(channelID, message) {
+  async sendMessage(channelID, botMessage) {
     this.bot.sendMessage({
       to: channelID,
-      message: message
+      message: botMessage
     });
   }
 
@@ -43,7 +50,7 @@ class Fembot {
             this.dkpCommand(user, channelID, message);
           },
           default: () => {
-            this.sendMessage(channelID, "```diff\n- Invalid command");
+            this.sendMessage(channelID, "```diff\n- Invalid command```");
           }
         };
 
@@ -56,7 +63,6 @@ class Fembot {
 
   giveOrTakeValidator(user, channelID, command) {
     let botMessage;
-
     let operator = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
     let targetUser = command.split(" ")[2];
@@ -66,44 +72,44 @@ class Fembot {
       num += 1;
     }
 
-    //if you dont have nough dkp points
-    if (amount > this.dailyDkpVal) {
-      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.dailyDkpVal}\`\`\``;
+    if (amount > this.maxDailyDKP) {
+      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP}\`\`\``;
       this.sendMessage(channelID, botMessage);
       return;
     }
 
-    //if trying to give points to yourself
     if (targetUser == user) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
       this.sendMessage(channelID, botMessage);
       return;
     }
 
-    this.giveAndTakeDKP(user, targetUser, amount, operator, channelID);
+    this.giveOrTakeDKP(user, targetUser, amount, operator, channelID);
   }
 
   dkpCommand(user, channelID, message) {
     let botMessage;
-    let fullCommand = message.split("!dkp ")[1];
+    let directives = message.split("!dkp ")[1];
     let command = message.split("!dkp ")[1];
-    if (typeof fullCommand != "undefined") {
-      command = fullCommand.split(" ")[0];
+    if (typeof directives != "undefined") {
+      command = directives.split(" ")[0];
     }
 
     const commands = {
       list: () => {
         this.dkpList(channelID);
       },
+      dice: () => {
+        this.dkpDice(user, channelID, directives);
+      },
       give: () => {
-        this.giveOrTakeValidator(user, channelID, fullCommand);
+        this.giveOrTakeValidator(user, channelID, directives);
       },
       take: () => {
-        this.giveOrTakeValidator(user, channelID, fullCommand);
+        this.giveOrTakeValidator(user, channelID, directives);
       },
       default: () => {
-        botMessage = this.templateDkpCommands();
-        this.sendMessage(channelID, botMessage);
+        this.sendMessage(channelID, this.tmplDkpCommands());
       }
     };
 
@@ -113,20 +119,13 @@ class Fembot {
   }
 
   dkpList(channelID) {
-    fs.readFile("dkp.json", (err, data) => {
-      if (err) {
-        throw err;
-      }
-      let jsonData = JSON.parse(data);
-      let users = jsonData.users;
-      let message = "```css\n";
-      let tableUsers = [["User", "DKP"]];
-      for (let user of users) {
-        tableUsers.push([user.username, user.dkp]);
-      }
-      message += table(tableUsers, { align: ["l", "r"] }) + "```";
-      this.sendMessage(channelID, message);
-    });
+    let botMessage = "```css\n";
+    let tableUsers = [["User", "DKP"]];
+    for (let user of this.dkpScores.users) {
+      tableUsers.push([user.username, user.dkp]);
+    }
+    botMessage += table(tableUsers, { align: ["l", "r"] }) + "```";
+    this.sendMessage(channelID, botMessage);
   }
 
   invalidCommand(channelID) {
@@ -143,103 +142,175 @@ class Fembot {
     switch (cmd) {
       case "roll":
         let roll = Math.floor(Math.random() * 100) + 1;
+
+        if (user == "Julius Caesar") {
+          roll = -1;
+        }
+
         botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
         this.sendMessage(channelID, botMessage);
+        return roll;
         break;
     }
   }
 
-  giveAndTakeDKP(currentUser, username, amount, modifier, channelID) {
-    fs.readFile("dkp.json", (err, data) => {
-      if (err) {
-        throw err;
-      }
-      let jsonData = JSON.parse(data);
-      let users = jsonData.users;
-      let targetUserIndex = users.findIndex(user => user.username == username);
-      let userIndex = users.findIndex(user => user.username == currentUser);
-      let foundUser = targetUserIndex == -1 ? false : true;
+  dkpDice(user, channelID, directives) {
+    let users = this.dkpScores.users;
+    let userIndex = this.getUserIndex(user);
 
-      //if current user is missing
-      if (userIndex == -1) {
-        users.push({
-          username: currentUser,
-          dkp: 0,
-          bank: { lastUpdate: new Date(), dkp: 100 }
-        });
-        userIndex = users.length - 1;
-      }
+    let amount = parseInt(directives.split(" ")[1]);
+    let choice = directives.split(" ")[2];
 
-      if (!foundUser) {
-        for (let user in this.bot.users) {
-          if (this.bot.users[user].username == username) {
-            foundUser = true;
-            users.push({
-              username: this.bot.users[user].username,
-              dkp: 0,
-              bank: { lastUpdate: new Date(), dkp: 100 }
-            });
-            break;
-          }
-        }
-        targetUserIndex = users.length - 1;
-      }
+    if (
+      choice == "high" ||
+      choice == "h" ||
+      choice == "low" ||
+      choice == "l" ||
+      choice == 7
+    ) {
+      if (users[userIndex].dkp >= amount) {
+        users[userIndex].dkp -= amount;
+        let diceOne = Math.floor(Math.random() * 6) + 1;
+        let diceTwo = Math.floor(Math.random() * 6) + 1;
+        let diceSum = diceOne + diceTwo;
+        let botMessage = `\`\`\`diff\n! You place your ${amount}  bet
++ First dice rolled: ${diceOne}
++ Second dice rolled: ${diceTwo}
++ For a total of ${diceSum}
 
-      let message = "";
-      if (foundUser) {
-        let now = new Date();
-        if (
-          Math.abs(now - new Date(users[userIndex].bank.lastUpdate)) > 86400000
-        ) {
-          users[userIndex].bank.dkp = this.dailyDkpVal;
-          users[userIndex].bank.lastUpdate = now;
-        }
-
-        if (users[userIndex].bank.dkp >= amount) {
-          users[userIndex].bank.dkp -= amount;
-          if (modifier == "give") {
-            users[targetUserIndex].dkp += amount;
-            message = `\`\`\`diff\n+ Gave ${amount} DKP to `;
-          } else if (modifier == "take") {
-            users[targetUserIndex].dkp -= amount;
-            message = `\`\`\`diff\n+ Took ${amount} DKP from `;
-          }
-          message += `${username}, you now have ${
-            users[userIndex].bank.dkp
-          } more DKP to give or take today.\`\`\``;
-          this.dkpJsonSave(jsonData);
+`;
+        let winnings = 0;
+        if (choice == 7 && diceSum == 7) {
+          winnings = amount * 4;
+          users[userIndex].dkp += winnings;
+          botMessage += `+ Holy smokes, you just won ${winnings} DKP!`;
+        } else if ((choice == "high" || choice == "h") && diceSum > 7) {
+          winnings = amount * 2;
+          users[userIndex].dkp += winnings;
+          botMessage += `+ Sweet, you just won ${winnings} DKP!`;
+        } else if ((choice == "low" || choice == "l") && diceSum < 7) {
+          winnings = amount * 2;
+          users[userIndex].dkp += winnings;
+          botMessage += `+ Sweet, you just won ${winnings} DKP!`;
         } else {
-          message = `\`\`\`diff\n- You don't have enough DKP. Remaining: ${
-            users[userIndex].bank.dkp
-          }\`\`\``;
+          botMessage += "+ You loose, sucker!";
         }
+        botMessage += "```";
+        this.sendMessage(channelID, botMessage);
+        this.saveDKP();
       } else {
-        message = `\`\`\`diff\n- Did not find the username\`\`\``;
+        this.sendMessage(channelID, "-Not enough dkp");
       }
-      this.sendMessage(channelID, message);
-    });
+    } else {
+      this.sendMessage(channelID, "-Invalid command");
+    }
   }
 
-  dkpJsonSave(users) {
-    let json = JSON.stringify(users);
+  getUserIndex(username) {
+    let users = this.dkpScores.users;
+    let userIndex = users.findIndex(user => user.username == username);
+    //if current user is missing, create him
+    if (userIndex == -1) {
+      users.push({
+        username: username,
+        dkp: 0,
+        bank: {
+          lastUpdate: new Date(new Date().toJSON().split("T")[0]),
+          dkp: 100
+        }
+      });
+      userIndex = users.length - 1;
+    }
+    return userIndex;
+  }
+
+  giveOrTakeDKP(currentUser, targetUser, amount, modifier, channelID) {
+    let users = this.dkpScores.users;
+    let targetUserIndex = users.findIndex(user => user.username == targetUser);
+    let foundUser = targetUserIndex == -1 ? false : true;
+    let userIndex = this.getUserIndex(currentUser);
+
+    if (!foundUser) {
+      for (let user in this.bot.users) {
+        if (this.bot.users[user].username == targetUser) {
+          foundUser = true;
+          users.push({
+            username: this.bot.users[user].username,
+            dkp: 0,
+            bank: {
+              lastUpdate: new Date(new Date().toJSON().split("T")[0]),
+              dkp: 100
+            }
+          });
+          break;
+        }
+      }
+      targetUserIndex = users.length - 1;
+    }
+
+    let botMessage = "";
+    if (foundUser) {
+      let now = new Date(new Date().toJSON().split("T")[0]);
+      let then = new Date(
+        new Date(users[userIndex].bank.lastUpdate).toJSON().split("T")[0]
+      );
+
+      console.log(now - then);
+
+      if (Math.abs(now - then) >= 86400000) {
+        users[userIndex].bank.dkp = this.maxDailyDKP;
+        users[userIndex].bank.lastUpdate = now;
+      }
+
+      if (users[userIndex].bank.dkp >= amount) {
+        users[userIndex].bank.dkp -= amount;
+        console.log("users[userIndex].bank.dkp ", amount);
+        if (modifier == "give") {
+          users[targetUserIndex].dkp += amount;
+          botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
+        } else if (modifier == "take") {
+          users[targetUserIndex].dkp -= Math.floor(amount / 2);
+          botMessage = `\`\`\`diff\n+ Took ${Math.floor(amount / 2)} DKP from `;
+        }
+        botMessage += `${targetUser}, you now have ${
+          users[userIndex].bank.dkp
+        } more DKP to give or take today.\`\`\``;
+        this.saveDKP();
+      } else {
+        botMessage = `\`\`\`diff\n- You don't have enough DKP. Remaining: ${
+          users[userIndex].bank.dkp
+        }\`\`\``;
+      }
+    } else {
+      botMessage = `\`\`\`diff\n- Did not find the username\`\`\``;
+    }
+    this.sendMessage(channelID, botMessage);
+  }
+
+  saveDKP() {
+    let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8");
   }
 
-  templateDkpCommands() {
+  tmplDkpCommands() {
     let msg = `\`\`\`diff\n
 You're allowed to give and take a total of ${
-      this.dailyDkpVal
+      this.maxDailyDKP
     } DKP every 24-hour period.
 
 commands:
 !dkp - show dkp commands
 !dkp list - list all users and their DKP
 !dkp give <amount> <user> - give DKP to a user
-!dkp take <amount> <user> - take DKP from a user
+!dkp take <amount> <user> - take DKP from a user (diminishing returns 50%)
+!dkp dice <amount> high/low/7 - feeling lucky? (h/l for short)
 
 examples:
 !dkp give 10 Tin
-!dkp take 10 Tin\`\`\``;
+!dkp take 10 Tin
+
+!dkp dice 50 h
+!dkp dice 50 7\`\`\``;
     return msg;
   }
 }
