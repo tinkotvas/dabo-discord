@@ -74,7 +74,6 @@ class Fembot {
    * @param {any} user - the user playing
    * @param {any} channelID - the channelID of where the commands was typed
    * @param {any} commands - the full command after !dkp
-   * @returns {number} - returns a 1-100 number
    * @memberof Fembot
    */
   rollDice(user, channelID, message) {
@@ -93,7 +92,6 @@ class Fembot {
 
         botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
         this.sendMessage(channelID, botMessage);
-        return roll;
         break;
     }
   }

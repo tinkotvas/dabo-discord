@@ -6,7 +6,7 @@
 * [Fembot](#Fembot)
     * [.messageHandler()](#Fembot+messageHandler)
     * [.sendMessage(channelID, botMessage)](#Fembot+sendMessage)
-    * [.rollDice(user, channelID, commands)](#Fembot+rollDice) ⇒ <code>number</code>
+    * [.rollDice(user, channelID, commands)](#Fembot+rollDice)
     * [.dkpCommands(user, channelID, message)](#Fembot+dkpCommands)
     * [.dkpList(channelID)](#Fembot+dkpList)
     * [.dkpDice(user, channelID, commands)](#Fembot+dkpDice)
@@ -35,11 +35,10 @@ sends message
 
 <a name="Fembot+rollDice"></a>
 
-### fembot.rollDice(user, channelID, commands) ⇒ <code>number</code>
+### fembot.rollDice(user, channelID, commands)
 basic !roll command 1-100
 
 **Kind**: instance method of [<code>Fembot</code>](#Fembot)  
-**Returns**: <code>number</code> - - returns a 1-100 number  
 
 | Param | Type | Description |
 | --- | --- | --- |
