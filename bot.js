@@ -128,7 +128,7 @@ class Fembot {
    * @param {any} user - the user playing
    * @param {any} channelID - the channelID of where the commands was typed
    * @param {any} commands - the full command after !dkp
-   * @returns
+   * @returns {number} - returns a 1-100 number
    * @memberof Fembot
    */
   rollDice(user, channelID, message) {
@@ -235,7 +235,7 @@ class Fembot {
    * JSON and respond with the index, otherwise we return -1
    *
    * @param {any} username the username of the one we want the index for
-   * @returns
+   * @returns {number} index - -1 or the actual index
    * @memberof Fembot
    */
   getUserIndex(username) {
@@ -268,7 +268,6 @@ class Fembot {
    * @param {any} currentUser the user that issued the command
    * @param {any} channelID the channelID of where the command was issued
    * @param {any} command should be all commands after "!dkp "
-   * @returns
    * @memberof Fembot
    */
   async giveOrTakeDKP(currentUser, channelID, command) {
