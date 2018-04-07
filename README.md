@@ -6,14 +6,14 @@
 * [Fembot](#Fembot)
     * [.messageHandler()](#Fembot+messageHandler)
     * [.sendMessage(channelID, botMessage)](#Fembot+sendMessage)
+    * [.rollDice(user, channelID, commands)](#Fembot+rollDice) ⇒ <code>number</code>
     * [.dkpCommands(user, channelID, message)](#Fembot+dkpCommands)
     * [.dkpList(channelID)](#Fembot+dkpList)
-    * [.rollDice(user, channelID, commands)](#Fembot+rollDice) ⇒ <code>number</code>
     * [.dkpDice(user, channelID, commands)](#Fembot+dkpDice)
-    * [.getUserIndex(username)](#Fembot+getUserIndex) ⇒ <code>number</code>
-    * [.giveOrTakeDKP(currentUser, channelID, command)](#Fembot+giveOrTakeDKP)
-    * [.saveDKP()](#Fembot+saveDKP)
-    * [.tmplDkpCommands()](#Fembot+tmplDkpCommands) ⇒ <code>string</code>
+    * [.dkpUserIndex(username)](#Fembot+dkpUserIndex) ⇒ <code>number</code>
+    * [.dkpAllotment(currentUser, channelID, command)](#Fembot+dkpAllotment)
+    * [.dkpSave()](#Fembot+dkpSave)
+    * [.dkpCommandsTemplate()](#Fembot+dkpCommandsTemplate) ⇒ <code>string</code>
 
 <a name="Fembot+messageHandler"></a>
 
@@ -32,6 +32,20 @@ sends message
 | --- | --- | --- |
 | channelID | <code>any</code> | the channelID of where the commands was typed |
 | botMessage | <code>string</code> | the message the bot should write |
+
+<a name="Fembot+rollDice"></a>
+
+### fembot.rollDice(user, channelID, commands) ⇒ <code>number</code>
+basic !roll command 1-100
+
+**Kind**: instance method of [<code>Fembot</code>](#Fembot)  
+**Returns**: <code>number</code> - - returns a 1-100 number  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| user | <code>any</code> | the user playing |
+| channelID | <code>any</code> | the channelID of where the commands was typed |
+| commands | <code>any</code> | the full command after !dkp |
 
 <a name="Fembot+dkpCommands"></a>
 
@@ -57,20 +71,6 @@ prints the current users and their DKP
 | --- | --- | --- |
 | channelID | <code>any</code> | the channelID of where the commands was typed |
 
-<a name="Fembot+rollDice"></a>
-
-### fembot.rollDice(user, channelID, commands) ⇒ <code>number</code>
-basic !roll command 1-100
-
-**Kind**: instance method of [<code>Fembot</code>](#Fembot)  
-**Returns**: <code>number</code> - - returns a 1-100 number  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| user | <code>any</code> | the user playing |
-| channelID | <code>any</code> | the channelID of where the commands was typed |
-| commands | <code>any</code> | the full command after !dkp |
-
 <a name="Fembot+dkpDice"></a>
 
 ### fembot.dkpDice(user, channelID, commands)
@@ -84,9 +84,9 @@ roll dice game of High/Low/7 (1/1/4*bet)
 | channelID | <code>any</code> | the channelID of where the commands was typed |
 | commands | <code>any</code> | the full command after !dkp |
 
-<a name="Fembot+getUserIndex"></a>
+<a name="Fembot+dkpUserIndex"></a>
 
-### fembot.getUserIndex(username) ⇒ <code>number</code>
+### fembot.dkpUserIndex(username) ⇒ <code>number</code>
 Checks if the username supplied is in our jsonif not checks for the user on the server, and ifa matching username is found, we save the user to ourJSON and respond with the index, otherwise we return -1
 
 **Kind**: instance method of [<code>Fembot</code>](#Fembot)  
@@ -96,9 +96,9 @@ Checks if the username supplied is in our jsonif not checks for the user on the
 | --- | --- | --- |
 | username | <code>any</code> | the username of the one we want the index for |
 
-<a name="Fembot+giveOrTakeDKP"></a>
+<a name="Fembot+dkpAllotment"></a>
 
-### fembot.giveOrTakeDKP(currentUser, channelID, command)
+### fembot.dkpAllotment(currentUser, channelID, command)
 used to give or take DKP
 
 **Kind**: instance method of [<code>Fembot</code>](#Fembot)  
@@ -109,15 +109,15 @@ used to give or take DKP
 | channelID | <code>any</code> | the channelID of where the command was issued |
 | command | <code>any</code> | should be all commands after "!dkp " |
 
-<a name="Fembot+saveDKP"></a>
+<a name="Fembot+dkpSave"></a>
 
-### fembot.saveDKP()
+### fembot.dkpSave()
 Saves the current user data with DKP scores
 
 **Kind**: instance method of [<code>Fembot</code>](#Fembot)  
-<a name="Fembot+tmplDkpCommands"></a>
+<a name="Fembot+dkpCommandsTemplate"></a>
 
-### fembot.tmplDkpCommands() ⇒ <code>string</code>
+### fembot.dkpCommandsTemplate() ⇒ <code>string</code>
 Just a string template for the DKP commands to be called
 
 **Kind**: instance method of [<code>Fembot</code>](#Fembot)  
