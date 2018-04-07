@@ -8,8 +8,12 @@ class Fembot {
     this.bot = new Discord.Client({
       token: auth.token,
       autorun: true
+    }).on("ready", evt => {
+      console.log("Connected");
+      console.log("Logged in as: ");
+      console.log(this.bot.username + " - (" + this.bot.id + ")");
+      this.messageHandler();
     });
-
     fs.readFile("dkp.json", (err, data) => {
       if (err) {
         throw err;
@@ -18,26 +22,9 @@ class Fembot {
     });
 
     this.maxDailyDKP = 100;
-    this.init();
   }
 
-  async sendMessage(channelID, botMessage) {
-    this.bot.sendMessage({
-      to: channelID,
-      message: botMessage
-    });
-  }
-
-  init() {
-    this.bot.on("ready", evt => {
-      console.log("Connected");
-      console.log("Logged in as: ");
-      console.log(this.bot.username + " - (" + this.bot.id + ")");
-      this.registerOnMessage();
-    });
-  }
-
-  registerOnMessage() {
+  messageHandler() {
     this.bot.on("message", async (user, userID, channelID, message, evt) => {
       if (message.substring(0, 1) == "!" && user != "fembot") {
         let command = message.substring(1).split(" ")[0];
@@ -58,6 +45,13 @@ class Fembot {
           ? commands[command]()
           : commands["default"]();
       }
+    });
+  }
+
+  async sendMessage(channelID, botMessage) {
+    this.bot.sendMessage({
+      to: channelID,
+      message: botMessage
     });
   }
 
@@ -173,33 +167,49 @@ class Fembot {
         let diceOne = Math.floor(Math.random() * 6) + 1;
         let diceTwo = Math.floor(Math.random() * 6) + 1;
         let diceSum = diceOne + diceTwo;
-        let botMessage = `\`\`\`diff\n! You place your ${amount}  bet
-+ First dice rolled: ${diceOne}
-+ Second dice rolled: ${diceTwo}
-+ For a total of ${diceSum}
 
-`;
+        let botMessage =
+          "```diff\n! You place your " +
+          amount +
+          " DKP bet on " +
+          (choice == "h" || choice == "l"
+            ? choice == "h" ? (choice = "high") : (choice = "low")
+            : choice) +
+          "\n" +
+          "\n+ First dice    : " +
+          diceOne +
+          "\n+ Second dice   : " +
+          diceTwo +
+          "\n+ Dice total    : " +
+          diceSum +
+          "\n\n";
+
         let winnings = 0;
         if (choice == 7 && diceSum == 7) {
           winnings = amount * 4;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Holy smokes, you just won ${winnings} DKP!`;
+          botMessage += `+ Holy smokes, you just won ${winnings} DKP, `;
         } else if ((choice == "high" || choice == "h") && diceSum > 7) {
           winnings = amount * 2;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Sweet, you just won ${winnings} DKP!`;
+          botMessage += `+ Sweet, you just won ${winnings} DKP, `;
         } else if ((choice == "low" || choice == "l") && diceSum < 7) {
           winnings = amount * 2;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Sweet, you just won ${winnings} DKP!`;
+          botMessage += `+ Sweet, you just won ${winnings} DKP, `;
         } else {
-          botMessage += "+ You loose, sucker!";
+          botMessage += "- You loose your hard earned DKP, ";
         }
-        botMessage += "```";
+        botMessage += "setting your total to " + users[userIndex].dkp + "```";
         this.sendMessage(channelID, botMessage);
         this.saveDKP();
       } else {
-        this.sendMessage(channelID, "-Not enough dkp");
+        this.sendMessage(
+          channelID,
+          `\`\`\`diff\n- Not enough DKP, you only have ${
+            users[userIndex].dkp
+          }\`\`\``
+        );
       }
     } else {
       this.sendMessage(channelID, "-Invalid command");
@@ -208,54 +218,39 @@ class Fembot {
 
   getUserIndex(username) {
     let users = this.dkpScores.users;
-    let userIndex = users.findIndex(user => user.username == username);
-    //if current user is missing, create him
-    if (userIndex == -1) {
-      users.push({
-        username: username,
-        dkp: 0,
-        bank: {
-          lastUpdate: new Date(new Date().toJSON().split("T")[0]),
-          dkp: 100
-        }
-      });
-      userIndex = users.length - 1;
-    }
-    return userIndex;
-  }
-
-  giveOrTakeDKP(currentUser, targetUser, amount, modifier, channelID) {
-    let users = this.dkpScores.users;
-    let targetUserIndex = users.findIndex(user => user.username == targetUser);
-    let foundUser = targetUserIndex == -1 ? false : true;
-    let userIndex = this.getUserIndex(currentUser);
-
-    if (!foundUser) {
+    let index = users.findIndex(user => user.username == username);
+    //if current user is missing, check if he exist and save him
+    if (index == -1) {
       for (let user in this.bot.users) {
-        if (this.bot.users[user].username == targetUser) {
-          foundUser = true;
+        if (this.bot.users[user].username == username) {
           users.push({
             username: this.bot.users[user].username,
+            id: this.bot.users[user].id,
             dkp: 0,
             bank: {
               lastUpdate: new Date(new Date().toJSON().split("T")[0]),
               dkp: 100
             }
           });
+          index = users.length - 1;
           break;
         }
       }
-      targetUserIndex = users.length - 1;
     }
+    return index;
+  }
+
+  async giveOrTakeDKP(currentUser, targetUser, amount, modifier, channelID) {
+    let users = this.dkpScores.users;
+    let targetUserIndex = this.getUserIndex(targetUser);
+    let userIndex = this.getUserIndex(currentUser);
 
     let botMessage = "";
-    if (foundUser) {
+    if (targetUserIndex >= 0 && userIndex >= 0) {
       let now = new Date(new Date().toJSON().split("T")[0]);
       let then = new Date(
         new Date(users[userIndex].bank.lastUpdate).toJSON().split("T")[0]
       );
-
-      console.log(now - then);
 
       if (Math.abs(now - then) >= 86400000) {
         users[userIndex].bank.dkp = this.maxDailyDKP;
@@ -264,7 +259,6 @@ class Fembot {
 
       if (users[userIndex].bank.dkp >= amount) {
         users[userIndex].bank.dkp -= amount;
-        console.log("users[userIndex].bank.dkp ", amount);
         if (modifier == "give") {
           users[targetUserIndex].dkp += amount;
           botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
@@ -277,12 +271,12 @@ class Fembot {
         } more DKP to give or take today.\`\`\``;
         this.saveDKP();
       } else {
-        botMessage = `\`\`\`diff\n- You don't have enough DKP. Remaining: ${
+        botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
         }\`\`\``;
       }
     } else {
-      botMessage = `\`\`\`diff\n- Did not find the username\`\`\``;
+      botMessage = `\`\`\`diff\n- Did not find the username ${targetUser}\`\`\``;
     }
     this.sendMessage(channelID, botMessage);
   }
@@ -293,24 +287,22 @@ class Fembot {
   }
 
   tmplDkpCommands() {
-    let msg = `\`\`\`diff\n
-You're allowed to give and take a total of ${
-      this.maxDailyDKP
-    } DKP every 24-hour period.
-
-commands:
-!dkp - show dkp commands
-!dkp list - list all users and their DKP
-!dkp give <amount> <user> - give DKP to a user
-!dkp take <amount> <user> - take DKP from a user (diminishing returns 50%)
-!dkp dice <amount> high/low/7 - feeling lucky? (h/l for short)
-
-examples:
-!dkp give 10 Tin
-!dkp take 10 Tin
-
-!dkp dice 50 h
-!dkp dice 50 7\`\`\``;
+    let msg =
+      "```diff\n" +
+      "You're allowed to give and take a total of " +
+      this.maxDailyDKP +
+      " DKP every 24-hour period." +
+      "\n\ncommands:" +
+      "\n!dkp - show dkp commands" +
+      "\n!dkp list - list all users and their DKP" +
+      "\n!dkp give <amount> <user> - give DKP to a user" +
+      "\n!dkp take <amount> <user> - take DKP from a user (diminishing returns 50%)" +
+      "\n!dkp dice <amount> high/low/7 - feeling lucky? (h/l for short)" +
+      "\n\nexamples:" +
+      "\n!dkp give 10 Tin" +
+      "\n!dkp take 10 Tin" +
+      "\n!dkp dice 50 h" +
+      "\n!dkp dice 50 7```";
     return msg;
   }
 }
