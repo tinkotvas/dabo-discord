@@ -216,7 +216,7 @@ class Fembot {
       } else {
         this.sendMessage(
           channelID,
-          `\`\`\`diff\n- Not enough DKP, you only have ${
+          `\`\`\`diff\n- Not enough DKP, you have ${
             users[userIndex].dkp
           }\`\`\``
         );
