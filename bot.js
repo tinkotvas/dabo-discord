@@ -34,6 +34,7 @@ class Fembot {
    */
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
+      console.log(message);
       if (message.substring(0, 1) == "!" && user != "fembot") {
         let command = message.substring(1).split(" ")[0];
 
@@ -45,7 +46,7 @@ class Fembot {
             this.dkpCommands(user, channelID, message);
           },
           default: () => {
-            this.sendMessage(channelID, "```diff\n- Invalid command```");
+            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
           }
         };
 
@@ -55,18 +56,77 @@ class Fembot {
       }
     });
   }
+
   /**
-   * sends message
-   *
-   * @param {any} channelID  - the channelID of where the commands was typed
-   * @param {string} botMessage - the message the bot should write
+   * sends messages
+   * 
+   * @param {any} channelID - id of the channel to send to
+   * @param {any} botMessage - the message
+   * @param {string} [color="pink"] - the color for the embed, pink by def
    * @memberof Fembot
    */
-  sendMessage(channelID, botMessage) {
+  sendMessage(channelID, botMessage, color = "pink") {
+    let colors = {
+      red: 16711680,
+      green: 65280,
+      blue: 255,
+      pink: 16738740
+    };
+    color = colors[color];
+    let fembotIconUrl =
+      "https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png";
+
+    let embed = {
+      title: null,
+      description: botMessage,
+      url: "",
+      color: color,
+      timestamp: new Date(),
+
+      footer: {
+        icon_url: fembotIconUrl,
+        text: "fembot"
+      },
+      fields: []
+    };
+
     this.bot.sendMessage({
       to: channelID,
-      message: botMessage
+      embed: embed
     });
+
+    // this.bot.sendMessage({
+    //   to: channelID,
+    //   message: botMessage,
+    //   embed: {
+    //     title: "I'm an embed!", // Title of the embed
+    //     description:
+    //       "Here is some more info, with **awesome** formatting.\nPretty *neat*, huh?",
+    //     author: {
+    //       // Author property
+    //       name: "name",
+    //       icon_url: ""
+    //     },
+    //     color: 0x008000, // Color, either in hex (show), or a base-10 integer
+    //     fields: [
+    //       // Array of field objects
+    //       {
+    //         name: "Some extra info.", // Field title
+    //         value: "Some extra value.", // Field
+    //         inline: true // Whether you want multiple fields in same line
+    //       },
+    //       {
+    //         name: "Some more extra info.",
+    //         value: "Another extra value.",
+    //         inline: true
+    //       }
+    //     ],
+    //     footer: {
+    //       // Footer text
+    //       text: "Created with Eris."
+    //     }
+    //   }
+    // });
   }
   /**
    * basic !roll command 1-100
@@ -171,56 +231,62 @@ class Fembot {
       choice == 7
     ) {
       if (users[userIndex].dkp >= amount) {
+        let msgColor = "green";
         users[userIndex].dkp -= amount;
         let diceOne = Math.floor(Math.random() * 6) + 1;
         let diceTwo = Math.floor(Math.random() * 6) + 1;
         let diceSum = diceOne + diceTwo;
 
-        let botMessage =
-          "```diff\n! You place your " +
-          amount +
-          " DKP bet on " +
-          (choice == "h" || choice == "l"
+        //custom emojis added ass :d1: :d2: etc. from img folder
+        let diceMapping = [
+          "<:d1:432210697318039552>",
+          "<:d2:432210699427643393>",
+          "<:d3:432210699540758543>",
+          "<:d4:432210696902803467>",
+          "<:d5:432210696965586954>",
+          "<:d6:432210699264196625>"
+        ];
+
+        let botMessage = `You place a ${amount} DKP bet on ${
+          choice == "h" || choice == "l"
             ? choice == "h" ? (choice = "high") : (choice = "low")
-            : choice) +
-          "\n" +
-          "\n+ First dice    : " +
-          diceOne +
-          "\n+ Second dice   : " +
-          diceTwo +
-          "\n+ Dice total    : " +
-          diceSum +
-          "\n\n";
+            : choice
+        }\n\n`;
+        botMessage += `${diceMapping[diceOne - 1]} on first dice\n${
+          diceMapping[diceTwo - 1]
+        } on second dice\n\nGiving you a totalt of ${diceSum}\n\n`;
 
         let winnings = 0;
         if (choice == 7 && diceSum == 7) {
           winnings = amount * 4;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Holy smokes, you just won ${winnings} DKP, `;
+          botMessage += `Holy smokes, you just won ${winnings} DKP, `;
         } else if ((choice == "high" || choice == "h") && diceSum > 7) {
           winnings = amount * 2;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Sweet, you just won ${winnings} DKP, `;
+          botMessage += `Sweet, you just won ${winnings} DKP, `;
         } else if ((choice == "low" || choice == "l") && diceSum < 7) {
           winnings = amount * 2;
           users[userIndex].dkp += winnings;
-          botMessage += `+ Sweet, you just won ${winnings} DKP, `;
+          botMessage += `Sweet, you just won ${winnings} DKP, `;
         } else {
-          botMessage += "- You loose your hard earned DKP, ";
+          botMessage += "You loose your hard earned DKP, ";
+          msgColor = "red";
         }
-        botMessage += "setting your total to " + users[userIndex].dkp + "```";
-        this.sendMessage(channelID, botMessage);
+        botMessage += "setting your total to " + users[userIndex].dkp;
+        this.sendMessage(channelID, botMessage, msgColor);
         this.dkpSave();
       } else {
         this.sendMessage(
           channelID,
           `\`\`\`diff\n- Not enough DKP, you have ${
             users[userIndex].dkp
-          }\`\`\``
+          }\`\`\``,
+          "red"
         );
       }
     } else {
-      this.sendMessage(channelID, "-Invalid command");
+      this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
     }
   }
   /**
@@ -277,20 +343,20 @@ class Fembot {
 
     if (amount > this.maxDailyDKP) {
       botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP}\`\`\``;
-      this.sendMessage(channelID, botMessage);
+      this.sendMessage(channelID, botMessage, "red");
       return;
     }
 
     if (targetUser == currentUser) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
-      this.sendMessage(channelID, botMessage);
+      this.sendMessage(channelID, botMessage, "red");
       return;
     }
 
     let users = this.dkpScores.users;
     let targetUserIndex = this.dkpUserIndex(targetUser);
     let userIndex = this.dkpUserIndex(currentUser);
-
+    let msgColor = "pink";
     if (targetUserIndex >= 0 && userIndex >= 0) {
       let now = new Date(new Date().toJSON().split("T")[0]);
       let then = new Date(
@@ -319,11 +385,13 @@ class Fembot {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
         }\`\`\``;
+        msgColor = "red";
       }
     } else {
       botMessage = `\`\`\`diff\n- Did not find the username ${targetUser}\`\`\``;
+      msgColor = "red";
     }
-    this.sendMessage(channelID, botMessage);
+    this.sendMessage(channelID, botMessage, msgColor);
   }
   /**
    * Saves the current user data with DKP scores
