@@ -1,40 +1,37 @@
 const Discord = require("discord.io");
-const auth = require("./auth.json");
 const fs = require("fs");
 const table = require("text-table");
 /**
  *
  *
- * @class Fembot
+ * @class Botman
  */
-class Fembot {
-  constructor() {
+module.exports = class Botman {
+  constructor(authToken) {
     this.bot = new Discord.Client({
-      token: auth.token,
+      token: authToken,
       autorun: true
-    }).on("ready", evt => {
-      console.log("Connected");
-      console.log("Logged in as: ");
-      console.log(this.bot.username + " - (" + this.bot.id + ")");
+    });
+    this.bot.on("ready", evt => {
+      console.log(
+        "Connected as " + this.bot.username + " (" + this.bot.id + ")"
+      );
       this.messageHandler();
     });
     fs.readFile("dkp.json", (err, data) => {
-      if (err) {
-        throw err;
-      }
+      if (err) throw err;
       this.dkpScores = JSON.parse(data);
     });
-
     this.maxDailyDKP = 100;
   }
   /**
    * registers everything that starts with !
    *
-   * @memberof Fembot
+   * @memberof Botman
    */
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
-      if (!/^!/.test(message) || user == "fembot") return;
+      if (!/^!/.test(message) || user == this.bot.username) return;
       let command = message.substring(1).split(" ")[0];
       const activeCommands = {
         roll: () => {
@@ -59,7 +56,7 @@ class Fembot {
    * @param {any} channelID - id of the channel to send to
    * @param {any} botMessage - the message
    * @param {string} [color="pink"] - the color for the embed, pink by def
-   * @memberof Fembot
+   * @memberof Botman
    */
   sendMessage(channelID, botMessage, color = "pink") {
     let colors = {
@@ -69,7 +66,7 @@ class Fembot {
       pink: 16738740
     };
     color = colors[color];
-    let fembotIconUrl =
+    let botIconUrl =
       "https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png";
 
     let embed = {
@@ -80,8 +77,8 @@ class Fembot {
       timestamp: new Date(),
 
       footer: {
-        icon_url: fembotIconUrl,
-        text: "fembot"
+        icon_url: botIconUrl,
+        text: this.bot.username
       },
       fields: []
     };
@@ -97,7 +94,7 @@ class Fembot {
    * @param {any} user - the user playing
    * @param {any} channelID - the channelID of where the commands was typed
    * @param {any} commands - the full command after !dkp
-   * @memberof Fembot
+   * @memberof Botman
    */
   rollDice(user, channelID, message) {
     let roll = Math.floor(Math.random() * 100) + 1;
@@ -110,7 +107,7 @@ class Fembot {
    * @param {any} user - the user playing
    * @param {any} channelID - the channelID of where the commands was typed
    * @param {any} message - the full command (message)
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpCommands(user, channelID, message) {
     let commands = message.split("!dkp ")[1];
@@ -143,7 +140,7 @@ class Fembot {
    * prints the current users and their DKP
    *
    * @param {any} channelID - the channelID of where the commands was typed
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpList(channelID) {
     let botMessage = "```css\n";
@@ -160,7 +157,7 @@ class Fembot {
    * @param {any} user - the user playing
    * @param {any} channelID - the channelID of where the commands was typed
    * @param {any} commands - the full command after !dkp
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpDice(user, channelID, commands) {
     let users = this.dkpScores.users;
@@ -230,14 +227,12 @@ class Fembot {
           }\`\`\``,
           "red"
         );
-
-      this.sendMessage(
-        channelID,
-        `\`\`\`diff\n- Invalid command or not enough DKP (remaining: ${
-          users[userIndex].dkp
-        }\`\`\``,
-        "red"
-      );
+      else
+        this.sendMessage(
+          channelID,
+          `\`\`\`diff\n- Invalid command\`\`\``,
+          "red"
+        );
     }
   }
   /**
@@ -248,7 +243,7 @@ class Fembot {
    *
    * @param {any} username the username of the one we want the index for
    * @returns {number} index - -1 or the actual index
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpUserIndex(username) {
     let users = this.dkpScores.users;
@@ -279,7 +274,7 @@ class Fembot {
    * @param {any} currentUser the user that issued the command
    * @param {any} channelID the channelID of where the command was issued
    * @param {any} command should be all commands after "!dkp "
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpAllotment(currentUser, channelID, command) {
     let botMessage;
@@ -347,7 +342,7 @@ class Fembot {
   /**
    * Saves the current user data with DKP scores
    *
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpSave() {
     let json = JSON.stringify(this.dkpScores);
@@ -357,7 +352,7 @@ class Fembot {
    * Just a string template for the DKP commands to be called
    *
    * @returns {string} botMessage - the whole message as a string
-   * @memberof Fembot
+   * @memberof Botman
    */
   dkpCommandsTemplate() {
     let botMessage =
@@ -379,6 +374,4 @@ class Fembot {
       "\n!dkp dice 50 7```";
     return botMessage;
   }
-}
-
-let bot = new Fembot();
+};
