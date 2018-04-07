@@ -33,7 +33,7 @@ class Fembot {
    * @memberof Fembot
    */
   messageHandler() {
-    this.bot.on("message", async (user, userID, channelID, message, evt) => {
+    this.bot.on("message", (user, userID, channelID, message, evt) => {
       if (message.substring(0, 1) == "!" && user != "fembot") {
         let command = message.substring(1).split(" ")[0];
 
@@ -62,65 +62,11 @@ class Fembot {
    * @param {string} botMessage - the message the bot should write
    * @memberof Fembot
    */
-  async sendMessage(channelID, botMessage) {
+  sendMessage(channelID, botMessage) {
     this.bot.sendMessage({
       to: channelID,
       message: botMessage
     });
-  }
-  /**
-   *  runs the methods depending on commands given
-   *
-   * @param {any} user - the user playing
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @param {any} message - the full command (message)
-   * @memberof Fembot
-   */
-  dkpCommands(user, channelID, message) {
-    let botMessage;
-    let commands = message.split("!dkp ")[1];
-    let command = message.split("!dkp ")[1];
-    if (typeof commands != "undefined") {
-      command = commands.split(" ")[0];
-    }
-
-    const activeCommands = {
-      list: () => {
-        this.dkpList(channelID);
-      },
-      dice: () => {
-        this.dkpDice(user, channelID, commands);
-      },
-      give: () => {
-        this.giveOrTakeDKP(user, channelID, commands);
-      },
-      take: () => {
-        this.giveOrTakeDKP(user, channelID, commands);
-      },
-      default: () => {
-        this.sendMessage(channelID, this.tmplDkpCommands());
-      }
-    };
-
-    typeof activeCommands[command] == "function"
-      ? activeCommands[command]()
-      : activeCommands["default"]();
-  }
-
-  /**
-   * prints the current users and their DKP
-   *
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @memberof Fembot
-   */
-  dkpList(channelID) {
-    let botMessage = "```css\n";
-    let tableUsers = [["User", "DKP"]];
-    for (let user of this.dkpScores.users) {
-      tableUsers.push([user.username, user.dkp]);
-    }
-    botMessage += table(tableUsers, { align: ["l", "r"] }) + "```";
-    this.sendMessage(channelID, botMessage);
   }
   /**
    * basic !roll command 1-100
@@ -151,7 +97,59 @@ class Fembot {
         break;
     }
   }
+  /**
+   *  runs the methods depending on commands given
+   *
+   * @param {any} user - the user playing
+   * @param {any} channelID - the channelID of where the commands was typed
+   * @param {any} message - the full command (message)
+   * @memberof Fembot
+   */
+  dkpCommands(user, channelID, message) {
+    let botMessage;
+    let commands = message.split("!dkp ")[1];
+    let command = message.split("!dkp ")[1];
+    if (typeof commands != "undefined") {
+      command = commands.split(" ")[0];
+    }
 
+    const activeCommands = {
+      list: () => {
+        this.dkpList(channelID);
+      },
+      dice: () => {
+        this.dkpDice(user, channelID, commands);
+      },
+      give: () => {
+        this.dkpAllotment(user, channelID, commands);
+      },
+      take: () => {
+        this.dkpAllotment(user, channelID, commands);
+      },
+      default: () => {
+        this.sendMessage(channelID, this.dkpCommandsTemplate());
+      }
+    };
+
+    typeof activeCommands[command] == "function"
+      ? activeCommands[command]()
+      : activeCommands["default"]();
+  }
+  /**
+   * prints the current users and their DKP
+   *
+   * @param {any} channelID - the channelID of where the commands was typed
+   * @memberof Fembot
+   */
+  dkpList(channelID) {
+    let botMessage = "```css\n";
+    let tableUsers = [["User", "DKP"]];
+    for (let user of this.dkpScores.users) {
+      tableUsers.push([user.username, user.dkp]);
+    }
+    botMessage += table(tableUsers, { align: ["l", "r"] }) + "```";
+    this.sendMessage(channelID, botMessage);
+  }
   /**
    * roll dice game of High/Low/7 (1/1/4*bet)
    *
@@ -162,7 +160,7 @@ class Fembot {
    */
   dkpDice(user, channelID, commands) {
     let users = this.dkpScores.users;
-    let userIndex = this.getUserIndex(user);
+    let userIndex = this.dkpUserIndex(user);
 
     let amount = parseInt(commands.split(" ")[1]);
     let choice = commands.split(" ")[2];
@@ -214,7 +212,7 @@ class Fembot {
         }
         botMessage += "setting your total to " + users[userIndex].dkp + "```";
         this.sendMessage(channelID, botMessage);
-        this.saveDKP();
+        this.dkpSave();
       } else {
         this.sendMessage(
           channelID,
@@ -227,7 +225,6 @@ class Fembot {
       this.sendMessage(channelID, "-Invalid command");
     }
   }
-
   /**
    * Checks if the username supplied is in our json
    * if not checks for the user on the server, and if
@@ -238,7 +235,7 @@ class Fembot {
    * @returns {number} index - -1 or the actual index
    * @memberof Fembot
    */
-  getUserIndex(username) {
+  dkpUserIndex(username) {
     let users = this.dkpScores.users;
     let index = users.findIndex(user => user.username == username);
     //if current user is missing, check if he exist and save him
@@ -261,7 +258,6 @@ class Fembot {
     }
     return index;
   }
-
   /**
    * used to give or take DKP
    *
@@ -270,7 +266,7 @@ class Fembot {
    * @param {any} command should be all commands after "!dkp "
    * @memberof Fembot
    */
-  async giveOrTakeDKP(currentUser, channelID, command) {
+  dkpAllotment(currentUser, channelID, command) {
     let botMessage;
     let modifier = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
@@ -287,15 +283,15 @@ class Fembot {
       return;
     }
 
-    if (targetUser == user) {
+    if (targetUser == currentUser) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
       this.sendMessage(channelID, botMessage);
       return;
     }
 
     let users = this.dkpScores.users;
-    let targetUserIndex = this.getUserIndex(targetUser);
-    let userIndex = this.getUserIndex(currentUser);
+    let targetUserIndex = this.dkpUserIndex(targetUser);
+    let userIndex = this.dkpUserIndex(currentUser);
 
     if (targetUserIndex >= 0 && userIndex >= 0) {
       let now = new Date(new Date().toJSON().split("T")[0]);
@@ -320,7 +316,7 @@ class Fembot {
         botMessage += `${targetUser}, you now have ${
           users[userIndex].bank.dkp
         } more DKP to give or take today.\`\`\``;
-        this.saveDKP();
+        this.dkpSave();
       } else {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
@@ -331,24 +327,22 @@ class Fembot {
     }
     this.sendMessage(channelID, botMessage);
   }
-
   /**
    * Saves the current user data with DKP scores
    *
    * @memberof Fembot
    */
-  saveDKP() {
+  dkpSave() {
     let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8");
   }
-
   /**
    * Just a string template for the DKP commands to be called
    *
    * @returns {string} botMessage - the whole message as a string
    * @memberof Fembot
    */
-  tmplDkpCommands() {
+  dkpCommandsTemplate() {
     let botMessage =
       "```diff\n" +
       "You're allowed to give and take a total of " +
