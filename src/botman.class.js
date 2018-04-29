@@ -38,6 +38,7 @@ module.exports = class Botman {
       let command = message.substring(1).split(" ")[0];
       const activeCommands = {
         roll: () => {
+          this.getBestDkp()
           this.rollDice(user, channelID, message);
         },
         dkpp: () => {
@@ -62,6 +63,16 @@ module.exports = class Botman {
         ? activeCommands[command]()
         : activeCommands["default"]();
     });
+  }
+
+  getBestDkp(){
+    let bestScorer = { dkp: -900000 }
+    for (let user of this.dkpScores.users) {
+      if(bestScorer.dkp < user.dkp){
+        bestScorer = user
+      }
+    }
+    return bestScorer
   }
 
   /**
@@ -304,8 +315,8 @@ module.exports = class Botman {
       num += 1;
     }
 
-    if (amount > this.maxDailyDKP) {
-      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP}\`\`\``;
+    if (amount > this.maxDailyDKP*2) {
+      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP*2}\`\`\``;
       this.sendMessage(channelID, botMessage, "red");
       return;
     }
@@ -327,7 +338,8 @@ module.exports = class Botman {
       );
 
       if (Math.abs(now - then) >= 86400000) {
-        users[userIndex].bank.dkp = this.maxDailyDKP;
+        let dkpToGive = currentUser == (this.getBestDkp()).username ? this.maxDailyDKP*2 : this.maxDailyDKP
+        users[userIndex].bank.dkp = dkpToGive;
         users[userIndex].bank.lastUpdate = now;
       }
 
@@ -376,10 +388,14 @@ module.exports = class Botman {
    */
   dkpCommandsTemplate() {
     let botMessage =
-      "```diff\n" +
+      "Dragon Killing Master God is: <@"+
+      this.getBestDkp().id +
+      ">\n```diff\n" +
       "You can give and take a total of " +
       this.maxDailyDKP +
-      " DKP every day." +
+      " DKP every day.\nUnless you are top scorer, then it's " +
+      this.maxDailyDKP*2 +
+      " DKP!" +
       "\n\ncommands:" +
       "\n!dkp - show dkp commands" +
       "\n!dkp list - list all users and their DKP" +
