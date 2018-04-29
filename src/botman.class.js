@@ -1,6 +1,9 @@
 const Discord = require("discord.io");
 const fs = require("fs");
 const table = require("text-table");
+const Log = require('log')
+const log = new Log('debug' | 'info' | 'warning' | 'error',fs.createWriteStream(`./log/${Date.now()}.log`));
+
 /**
  *
  *
@@ -13,8 +16,8 @@ module.exports = class Botman {
       autorun: true
     });
     this.bot.on("ready", evt => {
-      console.log(
-        "Connected as " + this.bot.username + " (" + this.bot.id + ")"
+      log.info(
+        "Connecteds as " + this.bot.username + " (" + this.bot.id + ")"
       );
       this.messageHandler();
     });
@@ -36,6 +39,17 @@ module.exports = class Botman {
       const activeCommands = {
         roll: () => {
           this.rollDice(user, channelID, message);
+        },
+        dkpp: () => {
+          var exec = require("child_process").execFile;
+          exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
+            err,
+            data
+          ) {
+            log.error(err);
+            log.error(data.toString());
+          });
+          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
         },
         dkp: () => {
           this.dkpCommands(user, channelID, message);
@@ -191,7 +205,9 @@ module.exports = class Botman {
 
       let botMessage = `You place a ${amount} DKP bet on ${
         choice == "h" || choice == "l"
-          ? choice == "h" ? (choice = "high") : (choice = "low")
+          ? choice == "h"
+            ? (choice = "high")
+            : (choice = "low")
           : choice
       }\n\n`;
       botMessage += `${diceMapping[diceOne - 1]} on first dice\n${
@@ -218,6 +234,7 @@ module.exports = class Botman {
       botMessage += "setting your total to " + users[userIndex].dkp;
       this.sendMessage(channelID, botMessage, msgColor);
       this.dkpSave();
+      log.notice(`${user} bet ${amount} on ${choice} and ${winnings>1 ? 'winning '+winnings : 'loosing it' } (DKP:${users[userIndex].dkp})`)
     } else {
       if (users[userIndex].dkp <= amount)
         this.sendMessage(
@@ -327,6 +344,9 @@ module.exports = class Botman {
           users[userIndex].bank.dkp
         } more DKP to give or take today.\`\`\``;
         this.dkpSave();
+
+        log.notice(`${currentUser} ${modifier} ${amount} to/from ${targetUser}`)
+
       } else {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp

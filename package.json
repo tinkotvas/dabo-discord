@@ -6,6 +6,7 @@
   "author": "Tin Kotvas",
   "dependencies": {
     "discord.io": "github:woor/discord.io#gateway_v6",
+    "log": "^1.4.0",
     "text-table": "^0.2.0"
   },
   "nodemonConfig": {
