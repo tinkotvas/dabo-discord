@@ -1,8 +1,11 @@
 const Discord = require("discord.io");
 const fs = require("fs");
 const table = require("text-table");
-const Log = require('log')
-const log = new Log('debug' | 'info' | 'warning' | 'error',fs.createWriteStream(`./log/${Date.now()}.log`));
+const Log = require("log");
+const log = new Log(
+  "debug" | "info" | "warning" | "error",
+  fs.createWriteStream(`./log/${Date.now()}.log`)
+);
 
 /**
  *
@@ -16,9 +19,7 @@ module.exports = class Botman {
       autorun: true
     });
     this.bot.on("ready", evt => {
-      log.info(
-        "Connecteds as " + this.bot.username + " (" + this.bot.id + ")"
-      );
+      log.info("Connecteds as " + this.bot.username + " (" + this.bot.id + ")");
       this.messageHandler();
     });
     fs.readFile("dkp.json", (err, data) => {
@@ -38,7 +39,7 @@ module.exports = class Botman {
       let command = message.substring(1).split(" ")[0];
       const activeCommands = {
         roll: () => {
-          this.getBestDkp()
+          this.getBestDkp();
           this.rollDice(user, channelID, message);
         },
         dkpp: () => {
@@ -65,14 +66,14 @@ module.exports = class Botman {
     });
   }
 
-  getBestDkp(){
-    let bestScorer = { dkp: -900000 }
+  getBestDkp() {
+    let bestScorer = { dkp: -900000 };
     for (let user of this.dkpScores.users) {
-      if(bestScorer.dkp < user.dkp){
-        bestScorer = user
+      if (bestScorer.dkp < user.dkp) {
+        bestScorer = user;
       }
     }
-    return bestScorer
+    return bestScorer;
   }
 
   /**
@@ -245,7 +246,11 @@ module.exports = class Botman {
       botMessage += "setting your total to " + users[userIndex].dkp;
       this.sendMessage(channelID, botMessage, msgColor);
       this.dkpSave();
-      log.notice(`${user} bet ${amount} on ${choice} and ${winnings>1 ? 'winning '+winnings : 'loosing it' } (DKP:${users[userIndex].dkp})`)
+      log.notice(
+        `${user} bet ${amount} on ${choice} and ${
+          winnings > 1 ? "winning " + winnings : "loosing it"
+        } (DKP:${users[userIndex].dkp})`
+      );
     } else {
       if (users[userIndex].dkp <= amount)
         this.sendMessage(
@@ -315,8 +320,9 @@ module.exports = class Botman {
       num += 1;
     }
 
-    if (amount > this.maxDailyDKP*2) {
-      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP*2}\`\`\``;
+    if (amount > this.maxDailyDKP * 2) {
+      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP *
+        2}\`\`\``;
       this.sendMessage(channelID, botMessage, "red");
       return;
     }
@@ -338,7 +344,10 @@ module.exports = class Botman {
       );
 
       if (Math.abs(now - then) >= 86400000) {
-        let dkpToGive = currentUser == (this.getBestDkp()).username ? this.maxDailyDKP*2 : this.maxDailyDKP
+        let dkpToGive =
+          currentUser == this.getBestDkp().username
+            ? this.maxDailyDKP * 2
+            : this.maxDailyDKP;
         users[userIndex].bank.dkp = dkpToGive;
         users[userIndex].bank.lastUpdate = now;
       }
@@ -357,8 +366,9 @@ module.exports = class Botman {
         } more DKP to give or take today.\`\`\``;
         this.dkpSave();
 
-        log.notice(`${currentUser} ${modifier} ${amount} to/from ${targetUser}`)
-
+        log.notice(
+          `${currentUser} ${modifier} ${amount} to/from ${targetUser}`
+        );
       } else {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
@@ -388,13 +398,13 @@ module.exports = class Botman {
    */
   dkpCommandsTemplate() {
     let botMessage =
-      "Dragon Killing Master God is: <@"+
+      "Dragon Killing Master God is: <@" +
       this.getBestDkp().id +
       ">\n```diff\n" +
       "You can give and take a total of " +
       this.maxDailyDKP +
       " DKP every day.\nUnless you are top scorer, then it's " +
-      this.maxDailyDKP*2 +
+      this.maxDailyDKP * 2 +
       " DKP!" +
       "\n\ncommands:" +
       "\n!dkp - show dkp commands" +
