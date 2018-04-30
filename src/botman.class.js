@@ -35,14 +35,21 @@ module.exports = class Botman {
    */
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
+      user = user.toUpperCase()
+      message = message.toUpperCase()
+      //(RegExp(`^${user}$`,'i')).test(this.bot.username)
       if (!/^!/.test(message) || user == this.bot.username) return;
       let command = message.substring(1).split(" ")[0];
       const activeCommands = {
         roll: () => {
-          this.getBestDkp();
+          this.getTopDkpUsername();
           this.rollDice(user, channelID, message);
         },
-        dkpp: () => {
+        god: () => {
+          if(!(userID == '201004098600828928')) {
+            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+            return
+          } 
           var exec = require("child_process").execFile;
           exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
             err,
@@ -51,7 +58,7 @@ module.exports = class Botman {
             log.error(err);
             log.error(data.toString());
           });
-          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+          this.sendMessage(channelID, "```diff\nAs you command, my lord```", "green");
         },
         dkp: () => {
           this.dkpCommands(user, channelID, message);
@@ -66,15 +73,7 @@ module.exports = class Botman {
     });
   }
 
-  getBestDkp() {
-    let bestScorer = { dkp: -900000 };
-    for (let user of this.dkpScores.users) {
-      if (bestScorer.dkp < user.dkp) {
-        bestScorer = user;
-      }
-    }
-    return bestScorer;
-  }
+
 
   /**
    * sends messages
@@ -143,19 +142,19 @@ module.exports = class Botman {
     }
     const activeCommands = {
       list: () => {
-        this.dkpList(channelID);
+        this.dkp_command_list(channelID);
       },
       dice: () => {
-        this.dkpDice(user, channelID, commands);
+        this.dkp_command_dice(user, channelID, commands);
       },
       give: () => {
-        this.dkpAllotment(user, channelID, commands);
+        this.dkp_command_giveOrTake(user, channelID, commands);
       },
       take: () => {
-        this.dkpAllotment(user, channelID, commands);
+        this.dkp_command_giveOrTake(user, channelID, commands);
       },
       default: () => {
-        this.sendMessage(channelID, this.dkpCommandsTemplate());
+        this.sendMessage(channelID, this.dkp_command_default());
       }
     };
     typeof activeCommands[command] == "function"
@@ -168,7 +167,7 @@ module.exports = class Botman {
    * @param {any} channelID - the channelID of where the commands was typed
    * @memberof Botman
    */
-  dkpList(channelID) {
+  dkp_command_list(channelID) {
     let botMessage = "```css\n";
     let tableUsers = [["User", "DKP"]];
     for (let user of this.dkpScores.users) {
@@ -185,9 +184,9 @@ module.exports = class Botman {
    * @param {any} commands - the full command after !dkp
    * @memberof Botman
    */
-  dkpDice(user, channelID, commands) {
+  dkp_command_dice(user, channelID, commands) {
     let users = this.dkpScores.users;
-    let userIndex = this.dkpUserIndex(user);
+    let userIndex = this.findOrCreateUser(user);
     let amount = parseInt(commands.split(" ")[1]);
     let choice = commands.split(" ")[2];
 
@@ -245,7 +244,7 @@ module.exports = class Botman {
       }
       botMessage += "setting your total to " + users[userIndex].dkp;
       this.sendMessage(channelID, botMessage, msgColor);
-      this.dkpSave();
+      this.saveScoresToJSON();
       log.notice(
         `${user} bet ${amount} on ${choice} and ${
           winnings > 1 ? "winning " + winnings : "loosing it"
@@ -278,7 +277,7 @@ module.exports = class Botman {
    * @returns {number} index - -1 or the actual index
    * @memberof Botman
    */
-  dkpUserIndex(username) {
+  findOrCreateUser(username) {
     let users = this.dkpScores.users;
     let index = users.findIndex(user => user.username == username);
     //if current user is missing, check if he exist and save him
@@ -309,7 +308,7 @@ module.exports = class Botman {
    * @param {any} command should be all commands after "!dkp "
    * @memberof Botman
    */
-  dkpAllotment(currentUser, channelID, command) {
+  dkp_command_giveOrTake(currentUser, channelID, command) {
     let botMessage;
     let modifier = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
@@ -334,18 +333,17 @@ module.exports = class Botman {
     }
 
     let users = this.dkpScores.users;
-    let targetUserIndex = this.dkpUserIndex(targetUser);
-    let userIndex = this.dkpUserIndex(currentUser);
+    let targetUserIndex = this.findOrCreateUser(targetUser);
+    let userIndex = this.findOrCreateUser(currentUser);
     let msgColor = "pink";
     if (targetUserIndex >= 0 && userIndex >= 0) {
       let now = new Date(new Date().toJSON().split("T")[0]);
       let then = new Date(
         new Date(users[userIndex].bank.lastUpdate).toJSON().split("T")[0]
       );
-
       if (Math.abs(now - then) >= 86400000) {
         let dkpToGive =
-          currentUser == this.getBestDkp().username
+          currentUser == this.getTopDkpUsername().username
             ? this.maxDailyDKP * 2
             : this.maxDailyDKP;
         users[userIndex].bank.dkp = dkpToGive;
@@ -364,7 +362,7 @@ module.exports = class Botman {
         botMessage += `${targetUser}, you now have ${
           users[userIndex].bank.dkp
         } more DKP to give or take today.\`\`\``;
-        this.dkpSave();
+        this.saveScoresToJSON();
 
         log.notice(
           `${currentUser} ${modifier} ${amount} to/from ${targetUser}`
@@ -386,9 +384,18 @@ module.exports = class Botman {
    *
    * @memberof Botman
    */
-  dkpSave() {
+  saveScoresToJSON() {
     let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8");
+  }
+  getTopDkpUsername() {
+    let bestScorer = { dkp: -900000 };
+    for (let user of this.dkpScores.users) {
+      if (bestScorer.dkp < user.dkp) {
+        bestScorer = user;
+      }
+    }
+    return bestScorer;
   }
   /**
    * Just a string template for the DKP commands to be called
@@ -396,10 +403,10 @@ module.exports = class Botman {
    * @returns {string} botMessage - the whole message as a string
    * @memberof Botman
    */
-  dkpCommandsTemplate() {
+  dkp_command_default() {
     let botMessage =
       "Dragon Killing Master God is: <@" +
-      this.getBestDkp().id +
+      this.getTopDkpUsername().id +
       ">\n```diff\n" +
       "You can give and take a total of " +
       this.maxDailyDKP +
