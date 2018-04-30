@@ -172,7 +172,7 @@ module.exports = class Botman {
       tableUsers.push([count, user.username, user.dkp]);
       count++
     }
-    let botMessage = `\`\`\`diff\n- Current Dragon Killing Master God: ${this.getTopDkpUser().username}\`\`\`\n`
+    let botMessage = `__Current Dragon Killing Master God__\n\n<@${this.getTopDkpUser().id}>\n\n`
     botMessage += '```glsl\n';
     botMessage += table(tableUsers, { align: ['l', 'l', 'r'] }) + '```';
     this.sendMessage(channelID, botMessage);
