@@ -1,9 +1,9 @@
-const Discord = require("discord.io");
-const fs = require("fs");
-const table = require("text-table");
-const Log = require("log");
+const Discord = require('discord.io');
+const fs = require('fs');
+const table = require('text-table');
+const Log = require('log');
 const log = new Log(
-  "debug" | "info" | "warning" | "error",
+  'debug' | 'info' | 'warning' | 'error',
   fs.createWriteStream(`./log/${Date.now()}.log`)
 );
 
@@ -18,11 +18,11 @@ module.exports = class Botman {
       token: authToken,
       autorun: true
     });
-    this.bot.on("ready", evt => {
-      log.info("Connecteds as " + this.bot.username + " (" + this.bot.id + ")");
+    this.bot.on('ready', evt => {
+      log.info('Connecteds as ' + this.bot.username + ' (' + this.bot.id + ')');
       this.messageHandler();
     });
-    fs.readFile("dkp.json", (err, data) => {
+    fs.readFile('dkp.json', (err, data) => {
       if (err) throw err;
       this.dkpScores = JSON.parse(data);
     });
@@ -34,20 +34,20 @@ module.exports = class Botman {
    * @memberof Botman
    */
   messageHandler() {
-    this.bot.on("message", (user, userID, channelID, message, evt) => {
+    this.bot.on('message', (user, userID, channelID, message, evt) => {
       if (!/^!/.test(message) || (RegExp(`^${user}$`,'i')).test(this.bot.username)) return;
-      let command = message.substring(1).split(" ")[0];
+      let command = message.substring(1).split(' ')[0];
       const activeCommands = {
         roll: () => {
-          this.getTopDkpUsername();
+          this.getTopDkpUser();
           this.rollDice(user, channelID, message);
         },
         god: () => {
           if(!(userID == '201004098600828928')) {
-            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+            this.sendMessage(channelID, '```diff\n- Invalid command```', 'red');
             return
           } 
-          var exec = require("child_process").execFile;
+          var exec = require('child_process').execFile;
           exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
             err,
             data
@@ -55,18 +55,18 @@ module.exports = class Botman {
             log.error(err);
             log.error(data.toString());
           });
-          this.sendMessage(channelID, "```diff\nAs you command, my lord```", "green");
+          this.sendMessage(channelID, '```diff\nAs you command, my lord```', 'green');
         },
         dkp: () => {
           this.dkpCommands(user, channelID, message);
         },
         default: () => {
-          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+          this.sendMessage(channelID, '```diff\n- Invalid command```', 'red');
         }
       };
-      typeof activeCommands[command] == "function"
+      typeof activeCommands[command] == 'function'
         ? activeCommands[command]()
-        : activeCommands["default"]();
+        : activeCommands['default']();
     });
   }
 
@@ -77,10 +77,10 @@ module.exports = class Botman {
    *
    * @param {any} channelID - id of the channel to send to
    * @param {any} botMessage - the message
-   * @param {string} [color="pink"] - the color for the embed, pink by def
+   * @param {string} [color='pink'] - the color for the embed, pink by def
    * @memberof Botman
    */
-  sendMessage(channelID, botMessage, color = "pink") {
+  sendMessage(channelID, botMessage, color = 'pink') {
     let colors = {
       red: 16711680,
       green: 65280,
@@ -89,12 +89,12 @@ module.exports = class Botman {
     };
     color = colors[color];
     let botIconUrl =
-      "https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png";
+      'https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png';
 
     let embed = {
       title: null,
       description: botMessage,
-      url: "",
+      url: '',
       color: color,
       timestamp: new Date(),
 
@@ -132,10 +132,10 @@ module.exports = class Botman {
    * @memberof Botman
    */
   dkpCommands(user, channelID, message) {
-    let commands = message.split("!dkp ")[1];
-    let command = message.split("!dkp ")[1];
-    if (typeof commands != "undefined") {
-      command = commands.split(" ")[0];
+    let commands = message.split('!dkp ')[1];
+    let command = message.split('!dkp ')[1];
+    if (typeof commands != 'undefined') {
+      command = commands.split(' ')[0];
     }
     const activeCommands = {
       list: () => {
@@ -154,9 +154,9 @@ module.exports = class Botman {
         this.sendMessage(channelID, this.dkp_command_default());
       }
     };
-    typeof activeCommands[command] == "function"
+    typeof activeCommands[command] == 'function'
       ? activeCommands[command]()
-      : activeCommands["default"]();
+      : activeCommands['default']();
   }
   /**
    * prints the current users and their DKP
@@ -165,12 +165,16 @@ module.exports = class Botman {
    * @memberof Botman
    */
   dkp_command_list(channelID) {
-    let botMessage = "```css\n";
-    let tableUsers = [["User", "DKP"]];
+    let tableUsers = [['#', 'User', 'DKP']];
+    let count = 1
     for (let user of this.dkpScores.users) {
-      tableUsers.push([user.username, user.dkp]);
+      if(user.dkp == 0) { continue }
+      tableUsers.push([count, user.username, user.dkp]);
+      count++
     }
-    botMessage += table(tableUsers, { align: ["l", "r"] }) + "```";
+    let botMessage = `\`\`\`diff\n- Current Dragon Killing Master God: ${this.getTopDkpUser().username}\`\`\`\n`
+    botMessage += '```glsl\n';
+    botMessage += table(tableUsers, { align: ['l', 'l', 'r'] }) + '```';
     this.sendMessage(channelID, botMessage);
   }
   /**
@@ -184,18 +188,18 @@ module.exports = class Botman {
   dkp_command_dice(user, channelID, commands) {
     let users = this.dkpScores.users;
     let userIndex = this.findOrCreateUser(user);
-    let amount = parseInt(commands.split(" ")[1]);
-    let choice = commands.split(" ")[2];
+    let amount = parseInt(commands.split(' ')[1]);
+    let choice = commands.split(' ')[2];
 
     if (
-      (choice == "high" ||
-        choice == "h" ||
-        choice == "low" ||
-        choice == "l" ||
+      (choice == 'high' ||
+        choice == 'h' ||
+        choice == 'low' ||
+        choice == 'l' ||
         choice == 7) &&
       users[userIndex].dkp >= amount
     ) {
-      let msgColor = "green";
+      let msgColor = 'green';
       users[userIndex].dkp -= amount;
       let diceOne = Math.floor(Math.random() * 6) + 1;
       let diceTwo = Math.floor(Math.random() * 6) + 1;
@@ -203,19 +207,19 @@ module.exports = class Botman {
 
       //custom emojis added ass :d1: :d2: etc. from img folder
       let diceMapping = [
-        "<:d1:432210697318039552>",
-        "<:d2:432210699427643393>",
-        "<:d3:432210699540758543>",
-        "<:d4:432210696902803467>",
-        "<:d5:432210696965586954>",
-        "<:d6:432210699264196625>"
+        '<:d1:432210697318039552>',
+        '<:d2:432210699427643393>',
+        '<:d3:432210699540758543>',
+        '<:d4:432210696902803467>',
+        '<:d5:432210696965586954>',
+        '<:d6:432210699264196625>'
       ];
 
       let botMessage = `You place a ${amount} DKP bet on ${
-        choice == "h" || choice == "l"
-          ? choice == "h"
-            ? (choice = "high")
-            : (choice = "low")
+        choice == 'h' || choice == 'l'
+          ? choice == 'h'
+            ? (choice = 'high')
+            : (choice = 'low')
           : choice
       }\n\n`;
       botMessage += `${diceMapping[diceOne - 1]} on first dice\n${
@@ -227,24 +231,24 @@ module.exports = class Botman {
         winnings = amount * 4;
         users[userIndex].dkp += winnings;
         botMessage += `Holy smokes, you just won ${winnings} DKP, `;
-      } else if ((choice == "high" || choice == "h") && diceSum > 7) {
+      } else if ((choice == 'high' || choice == 'h') && diceSum > 7) {
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
         botMessage += `Sweet, you just won ${winnings} DKP, `;
-      } else if ((choice == "low" || choice == "l") && diceSum < 7) {
+      } else if ((choice == 'low' || choice == 'l') && diceSum < 7) {
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
         botMessage += `Sweet, you just won ${winnings} DKP, `;
       } else {
-        botMessage += "You loose your hard earned DKP, ";
-        msgColor = "red";
+        botMessage += 'You loose your hard earned DKP, ';
+        msgColor = 'red';
       }
-      botMessage += "setting your total to " + users[userIndex].dkp;
+      botMessage += 'setting your total to ' + users[userIndex].dkp;
       this.sendMessage(channelID, botMessage, msgColor);
       this.saveScoresToJSON();
       log.notice(
         `${user} bet ${amount} on ${choice} and ${
-          winnings > 1 ? "winning " + winnings : "loosing it"
+          winnings > 1 ? 'winning ' + winnings : 'loosing it'
         } (DKP:${users[userIndex].dkp})`
       );
     } else {
@@ -254,13 +258,13 @@ module.exports = class Botman {
           `\`\`\`diff\n- Not enough DKP, you have ${
             users[userIndex].dkp
           }\`\`\``,
-          "red"
+          'red'
         );
       else
         this.sendMessage(
           channelID,
           `\`\`\`diff\n- Invalid command\`\`\``,
-          "red"
+          'red'
         );
     }
   }
@@ -286,7 +290,7 @@ module.exports = class Botman {
             id: this.bot.users[user].id,
             dkp: 0,
             bank: {
-              lastUpdate: new Date(new Date().toJSON().split("T")[0]),
+              lastUpdate: new Date(new Date().toJSON().split('T')[0]),
               dkp: 100
             }
           });
@@ -302,45 +306,45 @@ module.exports = class Botman {
    *
    * @param {any} currentUser the user that issued the command
    * @param {any} channelID the channelID of where the command was issued
-   * @param {any} command should be all commands after "!dkp "
+   * @param {any} command should be all commands after '!dkp '
    * @memberof Botman
    */
   dkp_command_giveOrTake(currentUser, channelID, command) {
     let botMessage;
-    let modifier = command.split(" ")[0];
-    let amount = parseInt(command.split(" ")[1]);
-    let targetUser = command.split(" ")[2];
+    let modifier = command.split(' ')[0];
+    let amount = parseInt(command.split(' ')[1]);
+    let targetUser = command.split(' ')[2];
     let num = 3;
-    while (command.split(" ")[num]) {
-      targetUser += ` ${command.split(" ")[num]}`;
+    while (command.split(' ')[num]) {
+      targetUser += ` ${command.split(' ')[num]}`;
       num += 1;
     }
 
     if (amount > this.maxDailyDKP * 2) {
       botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP *
         2}\`\`\``;
-      this.sendMessage(channelID, botMessage, "red");
+      this.sendMessage(channelID, botMessage, 'red');
       return;
     }
     (RegExp(`^${targetUser}$`,'i')).test(currentUser)
     if ((RegExp(`^${targetUser}$`,'i')).test(currentUser)) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
-      this.sendMessage(channelID, botMessage, "red");
+      this.sendMessage(channelID, botMessage, 'red');
       return;
     }
 
     let users = this.dkpScores.users;
     let targetUserIndex = this.findOrCreateUser(targetUser);
     let userIndex = this.findOrCreateUser(currentUser);
-    let msgColor = "pink";
+    let msgColor = 'pink';
     if (targetUserIndex >= 0 && userIndex >= 0) {
-      let now = new Date(new Date().toJSON().split("T")[0]);
+      let now = new Date(new Date().toJSON().split('T')[0]);
       let then = new Date(
-        new Date(users[userIndex].bank.lastUpdate).toJSON().split("T")[0]
+        new Date(users[userIndex].bank.lastUpdate).toJSON().split('T')[0]
       );
       if (Math.abs(now - then) >= 86400000) {
         let dkpToGive =
-          currentUser == this.getTopDkpUsername().username
+          currentUser == this.getTopDkpUser().username
             ? this.maxDailyDKP * 2
             : this.maxDailyDKP;
         users[userIndex].bank.dkp = dkpToGive;
@@ -349,10 +353,10 @@ module.exports = class Botman {
 
       if (users[userIndex].bank.dkp >= amount) {
         users[userIndex].bank.dkp -= amount;
-        if (modifier == "give") {
+        if (modifier == 'give') {
           users[targetUserIndex].dkp += amount;
           botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
-        } else if (modifier == "take") {
+        } else if (modifier == 'take') {
           users[targetUserIndex].dkp -= Math.floor(amount / 2);
           botMessage = `\`\`\`diff\n+ Took ${Math.floor(amount / 2)} DKP from `;
         }
@@ -368,11 +372,11 @@ module.exports = class Botman {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
         }\`\`\``;
-        msgColor = "red";
+        msgColor = 'red';
       }
     } else {
       botMessage = `\`\`\`diff\n- Did not find the username ${targetUser}\`\`\``;
-      msgColor = "red";
+      msgColor = 'red';
     }
     this.sendMessage(channelID, botMessage, msgColor);
   }
@@ -382,10 +386,11 @@ module.exports = class Botman {
    * @memberof Botman
    */
   saveScoresToJSON() {
+    this.dkpScores.users.sort(this.dynamicSort('-dkp'))
     let json = JSON.stringify(this.dkpScores);
-    fs.writeFile("dkp.json", json, "utf8");
+    fs.writeFile('dkp.json', json, 'utf8');
   }
-  getTopDkpUsername() {
+  getTopDkpUser() {
     let bestScorer = { dkp: -900000 };
     for (let user of this.dkpScores.users) {
       if (bestScorer.dkp < user.dkp) {
@@ -393,6 +398,17 @@ module.exports = class Botman {
       }
     }
     return bestScorer;
+  }
+  dynamicSort(property) {
+    var sortOrder = 1;
+    if(property[0] === '-') {
+        sortOrder = -1;
+        property = property.substr(1);
+    }
+    return function (a,b) {
+        var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+        return result * sortOrder;
+    }
   }
   /**
    * Just a string template for the DKP commands to be called
@@ -402,26 +418,26 @@ module.exports = class Botman {
    */
   dkp_command_default() {
     let botMessage =
-      "Dragon Killing Master God is: <@" +
-      this.getTopDkpUsername().id +
-      ">\n```diff\n" +
-      "You can give and take a total of " +
+      'Dragon Killing Master God is: <@' +
+      this.getTopDkpUser().id +
+      '>\n```diff\n' +
+      'You can give and take a total of ' +
       this.maxDailyDKP +
-      " DKP every day.\nUnless you are top scorer, then it's " +
+      ' DKP every day.\nUnless you are top scorer, then it\'s ' +
       this.maxDailyDKP * 2 +
-      " DKP!" +
-      "\n\ncommands:" +
-      "\n!dkp - show dkp commands" +
-      "\n!dkp list - list all users and their DKP" +
-      "\n!dkp give <amount> <user> - give DKP to a user" +
-      "\n!dkp take <amount> <user> - take DKP from a user (50% DR)" +
-      "\n!dkp dice <amount> h/high/l/low/7 - feeling lucky?" +
-      "\n\nexamples:" +
-      "\n!dkp give 10 Tin" +
-      "\n!dkp take 10 Tin" +
-      "\n!dkp dice 50 l" +
-      "\n!dkp dice 30 h" +
-      "\n!dkp dice 50 7```";
+      ' DKP!' +
+      '\n\ncommands:' +
+      '\n!dkp - show dkp commands' +
+      '\n!dkp list - list all users and their DKP' +
+      '\n!dkp give <amount> <user> - give DKP to a user' +
+      '\n!dkp take <amount> <user> - take DKP from a user (50% DR)' +
+      '\n!dkp dice <amount> h/high/l/low/7 - feeling lucky?' +
+      '\n\nexamples:' +
+      '\n!dkp give 10 Tin' +
+      '\n!dkp take 10 Tin' +
+      '\n!dkp dice 50 l' +
+      '\n!dkp dice 30 h' +
+      '\n!dkp dice 50 7```';
     return botMessage;
   }
 };
