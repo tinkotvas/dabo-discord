@@ -35,10 +35,7 @@ module.exports = class Botman {
    */
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
-      user = user.toUpperCase()
-      message = message.toUpperCase()
-      //(RegExp(`^${user}$`,'i')).test(this.bot.username)
-      if (!/^!/.test(message) || user == this.bot.username) return;
+      if (!/^!/.test(message) || (RegExp(`^${user}$`,'i')).test(this.bot.username)) return;
       let command = message.substring(1).split(" ")[0];
       const activeCommands = {
         roll: () => {
@@ -279,11 +276,11 @@ module.exports = class Botman {
    */
   findOrCreateUser(username) {
     let users = this.dkpScores.users;
-    let index = users.findIndex(user => user.username == username);
+    let index = users.findIndex(user => (RegExp(`^${user.username}$`,'i')).test(username));
     //if current user is missing, check if he exist and save him
     if (index == -1) {
       for (let user in this.bot.users) {
-        if (this.bot.users[user].username == username) {
+        if ((RegExp(`^${this.bot.users[user].username}$`,'i')).test(username)) {
           users.push({
             username: this.bot.users[user].username,
             id: this.bot.users[user].id,
@@ -325,8 +322,8 @@ module.exports = class Botman {
       this.sendMessage(channelID, botMessage, "red");
       return;
     }
-
-    if (targetUser == currentUser) {
+    (RegExp(`^${targetUser}$`,'i')).test(currentUser)
+    if ((RegExp(`^${targetUser}$`,'i')).test(currentUser)) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
       this.sendMessage(channelID, botMessage, "red");
       return;
