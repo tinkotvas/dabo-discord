@@ -39,6 +39,7 @@ module.exports = class Botman {
       let command = message.substring(1).split(' ')[0];
       const activeCommands = {
         roll: () => {
+          console.log(Object.values(this.bot.servers)[0].members)
           this.getTopDkpUser();
           this.rollDice(user, channelID, message);
         },
