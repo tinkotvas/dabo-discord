@@ -31,7 +31,7 @@ module.exports = class Botman {
   }
 
   registerShedules(){
-    let givePoints = schedule.scheduleJob('00 00 00 * *', function(){
+    let givePoints = schedule.scheduleJob('00 00 00 00 00', function(){
       //do something
       this.registerShedules();
     });
