@@ -1,6 +1,7 @@
 const Discord = require('discord.io');
 const fs = require('fs');
 const table = require('text-table');
+const schedule = require('node-schedule');
 const Log = require('log');
 const log = new Log(
   'debug' | 'info' | 'warning' | 'error',
@@ -26,20 +27,22 @@ module.exports = class Botman {
       if (err) throw err;
       this.dkpScores = JSON.parse(data);
     });
-    this.maxDailyDKP = 100;
+    this.maxDailyDKP = 500;
   }
-  /**
-   * registers everything that starts with !
-   *
-   * @memberof Botman
-   */
+
+  registerShedules(){
+    let givePoints = schedule.scheduleJob('00 00 00 * *', function(){
+      //do something
+      this.registerShedules();
+    });
+  }
+
   messageHandler() {
     this.bot.on('message', (user, userID, channelID, message, evt) => {
       if (!/^!/.test(message) || (RegExp(`^${user}$`,'i')).test(this.bot.username)) return;
       let command = message.substring(1).split(' ')[0];
       const activeCommands = {
         roll: () => {
-          this.getTopDkpUser();
           this.rollDice(user, channelID, message);
         },
         god: () => {
@@ -69,8 +72,6 @@ module.exports = class Botman {
         : activeCommands['default']();
     });
   }
-
-
 
   /**
    * sends messages
@@ -123,6 +124,9 @@ module.exports = class Botman {
     let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
     this.sendMessage(channelID, botMessage);
   }
+
+
+
   /**
    *  runs the methods depending on commands given
    *
@@ -140,6 +144,9 @@ module.exports = class Botman {
     const activeCommands = {
       list: () => {
         this.dkp_command_list(channelID);
+      },
+      sellsoul: () => {
+        this.dkp_command_sellSoul(user, channelID)
       },
       dice: () => {
         this.dkp_command_dice(user, channelID, commands);
@@ -177,14 +184,40 @@ module.exports = class Botman {
     botMessage += table(tableUsers, { align: ['l', 'l', 'r'] }) + '```';
     this.sendMessage(channelID, botMessage);
   }
-  /**
-   * roll dice game of High/Low/7 (1/1/4*bet)
-   *
-   * @param {any} user - the user playing
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @param {any} commands - the full command after !dkp
-   * @memberof Botman
-   */
+
+  dkp_command_sellSoul(user, channelID){
+    let users = this.dkpScores.users;
+    let userIndex = this.findOrCreateUser(user);
+    let newUser = false;
+
+    if(!users[userIndex].sellsoul){
+      users[userIndex].sellsoul = {}
+      newUser = true;
+    }
+
+    let now = new Date(new Date().toJSON().split('T')[0]);
+    // let then = new Date(
+    //   new Date(newUser || "2018-05-04T00:00:00.000Z").toJSON().split('T')[0]);
+    
+    let then = new Date(
+    new Date(newUser || users[userIndex].sellsoul.lastUpdate).toJSON().split('T')[0]);
+      if (Math.abs(now - then) >= 86400000 && users[userIndex].dkp == 0) {
+        let dice = Math.floor(Math.random() * 1000) + 1;
+        if(dice >= 666 && dice <= 999){
+          this.sendMessage(channelID, `You sold your Soul to the Devil and got 666 demons which you converted to DKP.`, 'green');
+          users[userIndex].dkp += 666;
+        }else{
+          this.sendMessage(channelID, `You sold your Soul to the Devil and got nothing to show for it.`, 'red');
+        }
+        users[userIndex].sellsoul.lastUpdate = now;
+        this.saveScoresToJSON();
+      }else if(users[userIndex].dkp > 0){
+        this.sendMessage(channelID, `You must be desperate to be dealing with the Devil, come back when you are.`, 'red');
+      }else if(!Math.abs(now - then)){
+        this.sendMessage(channelID, `You have already sold your Soul today.`, 'red');
+      }
+  }
+
   dkp_command_dice(user, channelID, commands) {
     let users = this.dkpScores.users;
     let userIndex = this.findOrCreateUser(user);
@@ -429,6 +462,7 @@ module.exports = class Botman {
       '\n\ncommands:' +
       '\n!dkp - show dkp commands' +
       '\n!dkp list - list all users and their DKP' +
+      '\n!dkp sellsoul - sell your soul to the Devil (once per day, if you have 0 dkp)' +
       '\n!dkp give <amount> <user> - give DKP to a user' +
       '\n!dkp take <amount> <user> - take DKP from a user (50% DR)' +
       '\n!dkp dice <amount> h/high/l/low/7 - feeling lucky?' +
