@@ -32,10 +32,54 @@ module.exports = class Botman {
 
   registerShedules(){
     let givePoints = schedule.scheduleJob('00 00 00 00 00', function(){
-      //do something
+      //this.giveInterest();
       this.registerShedules();
     });
   }
+
+  giveInterest(){
+    let users = this.dkpScores.users;
+    users.forEach(user => {
+      if(user.dkp > 0 ){
+        user.dkp += Math.round(user.dkp*0.2)
+      }
+    });
+  }
+
+  dkp_command_bless_or_curse(user, channelID, command){
+    let users = this.dkpScores.users;
+    let userIndex = this.findOrCreateUser(user);
+    let newUser = false;
+
+    if(!users[userIndex].blessOrCurse){
+      users[userIndex].blessOrCurse = {}
+      newUser = true;
+    }
+    let now = new Date(new Date().toJSON().split('T')[0]);
+    let then = new Date(
+    new Date(newUser || users[userIndex].blessOrCurse.lastUpdate).toJSON().split('T')[0]);
+      if (Math.abs(now - then) >= 86400000) {
+        users.forEach(user => {
+          if(user.dkp > 0 ){
+            if(command == "bless"){
+              user.dkp += Math.round(user.dkp*0.05)
+            } else {
+              user.dkp -= Math.round(user.dkp*0.05)
+            }
+          }
+        });
+        if(command == "bless"){
+          this.sendMessage(channelID, user + ' blesses everybody for their valiant effort slaying dragons. May the sun shine bright on you! (+5% DKP)', 'green');
+        } else {
+          this.sendMessage(channelID, user +' curses everybody hoarding DKP! May everyone turn to ash in eternal hellfire. (-5% DKP)', 'red');
+        }
+        users[userIndex].blessOrCurse.lastUpdate = now;
+        this.saveScoresToJSON();
+      }else{
+        this.sendMessage(channelID, user +', you have already excercised your divine right on this glorious day.');
+      }
+    }
+
 
   messageHandler() {
     this.bot.on('message', (user, userID, channelID, message, evt) => {
@@ -142,6 +186,12 @@ module.exports = class Botman {
       command = commands.split(' ')[0];
     }
     const activeCommands = {
+      bless: () => {
+        this.dkp_command_bless_or_curse(user, channelID, command);
+      },
+      curse: () => {
+        this.dkp_command_bless_or_curse(user, channelID, command);
+      },
       list: () => {
         this.dkp_command_list(channelID);
       },
@@ -462,16 +512,20 @@ module.exports = class Botman {
       '\n\ncommands:' +
       '\n!dkp - show dkp commands' +
       '\n!dkp list - list all users and their DKP' +
-      '\n!dkp sellsoul - sell your soul to the Devil (once per day, if you have 0 dkp)' +
-      '\n!dkp give <amount> <user> - give DKP to a user' +
-      '\n!dkp take <amount> <user> - take DKP from a user (50% DR)' +
+      '\n!dkp give <amount> <user> - give DKP' +
+      '\n!dkp take <amount> <user> - take DKP (50% DR)' +
       '\n!dkp dice <amount> h/high/l/low/7 - feeling lucky?' +
       '\n\nexamples:' +
       '\n!dkp give 10 Tin' +
       '\n!dkp take 10 Tin' +
       '\n!dkp dice 50 l' +
       '\n!dkp dice 30 h' +
-      '\n!dkp dice 50 7```';
+      '\n!dkp dice 50 7' +
+      '\n\ndaily commands:' +
+      '\n!dkp bless - bless the leaderboard' +
+      '\n!dkp curse - curse the leadeboard' +
+      '\n!dkp sellsoul - sell your soul (only at 0 DKP)' +
+      '```';
     return botMessage;
   }
 };
