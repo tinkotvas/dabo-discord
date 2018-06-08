@@ -5,7 +5,8 @@ const schedule = require("node-schedule");
 const Log = require("log");
 const log = new Log(
   "debug" | "info" | "warning" | "error",
-  fs.createWriteStream(`./log/${Date.now()}.log`)
+  // save to file, bad idea
+ // fs.createWriteStream(`./log/${Date.now()}.log`)
 );
 
 module.exports = class Botman {

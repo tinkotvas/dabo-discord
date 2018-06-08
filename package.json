@@ -15,8 +15,5 @@
       "*.json"
     ],
     "delay": "2500"
-  },
-  "scripts": {
-    "docs": "jsdoc2md bot.js > README.md"
   }
 }
