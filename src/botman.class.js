@@ -25,20 +25,177 @@ module.exports = class Botman {
     this.maxDailyDKP = 500;
   }
 
-  registerShedules() {
-    let givePoints = schedule.scheduleJob("00 00 00 00 00", function() {
-      //this.giveInterest();
-      this.registerShedules();
+  messageHandler() {
+    this.bot.on("message", (user, userID, channelID, message, evt) => {
+      if (
+        !/^!/.test(message) ||
+        RegExp(`^${user}$`, "i").test(this.bot.username)
+      )
+        return;
+      let command = message.substring(1).split(" ")[0];
+      const activeCommands = {
+        roll: () => {
+          this.command_roll(user, channelID, message);
+        },
+        god: () => {
+          if (!(userID == "201004098600828928")) {
+            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+            return;
+          }
+          var exec = require("child_process").execFile;
+          exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
+            err,
+            data
+          ) {
+            log.error(err);
+            log.error(data.toString());
+          });
+          this.sendMessage(
+            channelID,
+            "```diff\nAs you command, my lord```",
+            "green"
+          );
+        },
+        dkp: () => {
+          this.dkp_commands(user, channelID, message);
+        },
+        default: () => {
+          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+        }
+      };
+      typeof activeCommands[command] == "function"
+        ? activeCommands[command]()
+        : activeCommands["default"]();
     });
   }
 
-  giveInterest() {
-    let users = this.dkpScores.users;
-    users.forEach(user => {
-      if (user.dkp > 0) {
-        user.dkp += Math.round(user.dkp * 0.2);
-      }
+  sendMessage(channelID, botMessage, color = "pink") {
+    let colors = {
+      red: 16711680,
+      green: 65280,
+      blue: 255,
+      pink: 16738740
+    };
+    color = colors[color];
+    let botIconUrl =
+      "https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png";
+
+    let embed = {
+      title: null,
+      description: botMessage,
+      url: "",
+      color: color,
+      timestamp: new Date(),
+
+      footer: {
+        icon_url: botIconUrl,
+        text: this.bot.username
+      },
+      fields: []
+    };
+
+    this.bot.sendMessage({
+      to: channelID,
+      embed: embed
     });
+  }
+
+  findOrCreateUser(username) {
+    let users = this.dkpScores.users;
+    let index = users.findIndex(user =>
+      RegExp(`^${user.username}$`, "i").test(username)
+    );
+    //if current user is missing, check if he exist and save him
+    if (index == -1) {
+      for (let user in this.bot.users) {
+        if (RegExp(`^${this.bot.users[user].username}$`, "i").test(username)) {
+          users.push({
+            username: this.bot.users[user].username,
+            id: this.bot.users[user].id,
+            dkp: 0,
+            bank: {
+              lastUpdate: new Date(new Date().toJSON().split("T")[0]),
+              dkp: this.maxDailyDKP
+            }
+          });
+          index = users.length - 1;
+          break;
+        }
+      }
+    }
+    return index;
+  }
+
+  // registerShedules() {
+  //   let givePoints = schedule.scheduleJob("00 00 00 00 00", function() {
+
+  //     this.registerShedules();
+  //   });
+  // }
+
+  dkp_commands(user, channelID, message) {
+    let commands = message.split("!dkp ")[1];
+    let command = message.split("!dkp ")[1];
+    if (typeof commands != "undefined") {
+      command = commands.split(" ")[0];
+    }
+
+    const activeCommands = {
+      shop: () => {
+        this.dkp_command_shop(user, channelID, commands);
+      },
+      s: () => {
+        this.dkp_command_shop(user, channelID, commands);
+      },
+      bless: () => {
+        this.dkp_command_bless_or_curse(user, channelID, command);
+      },
+      curse: () => {
+        this.dkp_command_bless_or_curse(user, channelID, command);
+      },
+      list: () => {
+        this.dkp_command_list(channelID);
+      },
+      l: () => {
+        this.dkp_command_list(channelID);
+      },
+      sellsoul: () => {
+        this.dkp_command_sellSoul(user, channelID);
+      },
+      ss: () => {
+        this.dkp_command_sellSoul(user, channelID);
+      },
+      dice: () => {
+        this.dkp_command_dice(user, channelID, commands);
+      },
+      d: () => {
+        this.dkp_command_dice(user, channelID, commands);
+      },
+      give: () => {
+        this.dkp_command_giveOrTake(user, channelID, commands);
+      },
+      g: () => {
+        this.dkp_command_giveOrTake(user, channelID, commands);
+      },
+      take: () => {
+        this.dkp_command_giveOrTake(user, channelID, commands);
+      },
+      t: () => {
+        this.dkp_command_giveOrTake(user, channelID, commands);
+      },
+      default: () => {
+        this.sendMessage(channelID, this.dkp_command_default());
+      }
+    };
+
+    // add shortened of all commands to first char
+    // Object.keys(activeCommands).forEach( key => {
+    //   activeCommands[key.charAt(0)] = activeCommands[key]
+    // });
+
+    typeof activeCommands[command] == "function"
+      ? activeCommands[command]()
+      : activeCommands["default"]();
   }
 
   dkp_command_bless_or_curse(user, channelID, command) {
@@ -92,145 +249,6 @@ module.exports = class Botman {
     }
   }
 
-  messageHandler() {
-    this.bot.on("message", (user, userID, channelID, message, evt) => {
-      if (
-        !/^!/.test(message) ||
-        RegExp(`^${user}$`, "i").test(this.bot.username)
-      )
-        return;
-      let command = message.substring(1).split(" ")[0];
-      const activeCommands = {
-        roll: () => {
-          this.rollDice(user, channelID, message);
-        },
-        god: () => {
-          if (!(userID == "201004098600828928")) {
-            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
-            return;
-          }
-          var exec = require("child_process").execFile;
-          exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
-            err,
-            data
-          ) {
-            log.error(err);
-            log.error(data.toString());
-          });
-          this.sendMessage(
-            channelID,
-            "```diff\nAs you command, my lord```",
-            "green"
-          );
-        },
-        dkp: () => {
-          this.dkpCommands(user, channelID, message);
-        },
-        default: () => {
-          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
-        }
-      };
-      typeof activeCommands[command] == "function"
-        ? activeCommands[command]()
-        : activeCommands["default"]();
-    });
-  }
-
-  sendMessage(channelID, botMessage, color = "pink") {
-    let colors = {
-      red: 16711680,
-      green: 65280,
-      blue: 255,
-      pink: 16738740
-    };
-    color = colors[color];
-    let botIconUrl =
-      "https://cdn.discordapp.com/app-icons/430399909024497664/dedb8bfa775a4ba760872968e0dba46e.png";
-
-    let embed = {
-      title: null,
-      description: botMessage,
-      url: "",
-      color: color,
-      timestamp: new Date(),
-
-      footer: {
-        icon_url: botIconUrl,
-        text: this.bot.username
-      },
-      fields: []
-    };
-
-    this.bot.sendMessage({
-      to: channelID,
-      embed: embed
-    });
-  }
-
-  rollDice(user, channelID, message) {
-    let roll = Math.floor(Math.random() * 100) + 1;
-    let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
-    this.sendMessage(channelID, botMessage);
-  }
-
-  dkpCommands(user, channelID, message) {
-    let commands = message.split("!dkp ")[1];
-    let command = message.split("!dkp ")[1];
-    if (typeof commands != "undefined") {
-      command = commands.split(" ")[0];
-    }
-    const activeCommands = {
-      shop: () => {
-        this.dkp_command_shop(user, channelID, commands);
-      },
-      s: () => {
-        this.dkp_command_shop(user, channelID, commands);
-      },
-      bless: () => {
-        this.dkp_command_bless_or_curse(user, channelID, command);
-      },
-      curse: () => {
-        this.dkp_command_bless_or_curse(user, channelID, command);
-      },
-      list: () => {
-        this.dkp_command_list(channelID);
-      },
-      l: () => {
-        this.dkp_command_list(channelID);
-      },
-      sellsoul: () => {
-        this.dkp_command_sellSoul(user, channelID);
-      },
-      ss: () => {
-        this.dkp_command_sellSoul(user, channelID);
-      },
-      dice: () => {
-        this.dkp_command_dice(user, channelID, commands);
-      },
-      d: () => {
-        this.dkp_command_dice(user, channelID, commands);
-      },
-      give: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
-      },
-      g: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
-      },
-      take: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
-      },
-      t: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
-      },
-      default: () => {
-        this.sendMessage(channelID, this.dkp_command_default());
-      }
-    };
-    typeof activeCommands[command] == "function"
-      ? activeCommands[command]()
-      : activeCommands["default"]();
-  }
-
   dkp_command_list(channelID) {
     let tableUsers = [["#", "User", "DKP"]];
     let count = 1;
@@ -266,9 +284,9 @@ module.exports = class Botman {
         if (!users[userIndex].inventory[choiceNr]) {
           users[userIndex].inventory[choiceNr] = 0;
         }
-        if(amountOf){
-          cost = cost*amountOf;
-          amountPerPurchase = amountPerPurchase*amountOf;
+        if (amountOf) {
+          cost = cost * amountOf;
+          amountPerPurchase = amountPerPurchase * amountOf;
         }
         if (
           users[userIndex].dkp >= cost &&
@@ -288,7 +306,11 @@ module.exports = class Botman {
         for (let i = 1; i <= numberOfShopItems; i++) {
           if (users[userIndex].inventory[i]) {
             botMessage +=
-              "Item number " + i + " charges: " + users[userIndex].inventory[i] + "\n";
+              "Item number " +
+              i +
+              " charges: " +
+              users[userIndex].inventory[i] +
+              "\n";
           }
         }
         botMessage += "\n```";
@@ -414,16 +436,22 @@ module.exports = class Botman {
         winnings = amount * 4;
         users[userIndex].dkp += winnings;
         botMessage += `Holy smokes, you just won ${winnings} DKP, `;
-      } else if ((choice == "high" || choice == "h") && (diceSum > 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))) {
-        if(diceSum == 7){
-          users[userIndex].inventory[1] -= 1
+      } else if (
+        (choice == "high" || choice == "h") &&
+        (diceSum > 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
+      ) {
+        if (diceSum == 7) {
+          users[userIndex].inventory[1] -= 1;
         }
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
         botMessage += `High win, you just won ${winnings} DKP, `;
-      } else if ((choice == "low" || choice == "l") && (diceSum < 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))) {
-        if(diceSum == 7){
-          users[userIndex].inventory[1] -= 1
+      } else if (
+        (choice == "low" || choice == "l") &&
+        (diceSum < 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
+      ) {
+        if (diceSum == 7) {
+          users[userIndex].inventory[1] -= 1;
         }
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
@@ -456,32 +484,6 @@ module.exports = class Botman {
           "red"
         );
     }
-  }
-
-  findOrCreateUser(username) {
-    let users = this.dkpScores.users;
-    let index = users.findIndex(user =>
-      RegExp(`^${user.username}$`, "i").test(username)
-    );
-    //if current user is missing, check if he exist and save him
-    if (index == -1) {
-      for (let user in this.bot.users) {
-        if (RegExp(`^${this.bot.users[user].username}$`, "i").test(username)) {
-          users.push({
-            username: this.bot.users[user].username,
-            id: this.bot.users[user].id,
-            dkp: 0,
-            bank: {
-              lastUpdate: new Date(new Date().toJSON().split("T")[0]),
-              dkp: 100
-            }
-          });
-          index = users.length - 1;
-          break;
-        }
-      }
-    }
-    return index;
   }
 
   dkp_command_giveOrTake(currentUser, channelID, command) {
@@ -561,15 +563,7 @@ module.exports = class Botman {
     let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8");
   }
-  getTopDkpUser() {
-    let bestScorer = { dkp: -900000 };
-    for (let user of this.dkpScores.users) {
-      if (bestScorer.dkp < user.dkp) {
-        bestScorer = user;
-      }
-    }
-    return bestScorer;
-  }
+
   dynamicSort(property) {
     var sortOrder = 1;
     if (property[0] === "-") {
@@ -581,6 +575,16 @@ module.exports = class Botman {
         a[property] < b[property] ? -1 : a[property] > b[property] ? 1 : 0;
       return result * sortOrder;
     };
+  }
+
+  getTopDkpUser() {
+    let bestScorer = { dkp: -900000 };
+    for (let user of this.dkpScores.users) {
+      if (bestScorer.dkp < user.dkp) {
+        bestScorer = user;
+      }
+    }
+    return bestScorer;
   }
 
   dkp_command_default() {
