@@ -8,11 +8,6 @@ const log = new Log(
   fs.createWriteStream(`./log/${Date.now()}.log`)
 );
 
-/**
- *
- *
- * @class Botman
- */
 module.exports = class Botman {
   constructor(authToken) {
     this.bot = new Discord.Client({
@@ -141,14 +136,6 @@ module.exports = class Botman {
     });
   }
 
-  /**
-   * sends messages
-   *
-   * @param {any} channelID - id of the channel to send to
-   * @param {any} botMessage - the message
-   * @param {string} [color='pink'] - the color for the embed, pink by def
-   * @memberof Botman
-   */
   sendMessage(channelID, botMessage, color = "pink") {
     let colors = {
       red: 16711680,
@@ -179,28 +166,13 @@ module.exports = class Botman {
       embed: embed
     });
   }
-  /**
-   * basic !roll command 1-100
-   *
-   * @param {any} user - the user playing
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @param {any} commands - the full command after !dkp
-   * @memberof Botman
-   */
+
   rollDice(user, channelID, message) {
     let roll = Math.floor(Math.random() * 100) + 1;
     let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
     this.sendMessage(channelID, botMessage);
   }
 
-  /**
-   *  runs the methods depending on commands given
-   *
-   * @param {any} user - the user playing
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @param {any} message - the full command (message)
-   * @memberof Botman
-   */
   dkpCommands(user, channelID, message) {
     let commands = message.split("!dkp ")[1];
     let command = message.split("!dkp ")[1];
@@ -258,12 +230,7 @@ module.exports = class Botman {
       ? activeCommands[command]()
       : activeCommands["default"]();
   }
-  /**
-   * prints the current users and their DKP
-   *
-   * @param {any} channelID - the channelID of where the commands was typed
-   * @memberof Botman
-   */
+
   dkp_command_list(channelID) {
     let tableUsers = [["#", "User", "DKP"]];
     let count = 1;
@@ -490,16 +457,7 @@ module.exports = class Botman {
         );
     }
   }
-  /**
-   * Checks if the username supplied is in our json
-   * if not checks for the user on the server, and if
-   * a matching username is found, we save the user to our
-   * JSON and respond with the index, otherwise we return -1
-   *
-   * @param {any} username the username of the one we want the index for
-   * @returns {number} index - -1 or the actual index
-   * @memberof Botman
-   */
+
   findOrCreateUser(username) {
     let users = this.dkpScores.users;
     let index = users.findIndex(user =>
@@ -525,14 +483,7 @@ module.exports = class Botman {
     }
     return index;
   }
-  /**
-   * used to give or take DKP
-   *
-   * @param {any} currentUser the user that issued the command
-   * @param {any} channelID the channelID of where the command was issued
-   * @param {any} command should be all commands after '!dkp '
-   * @memberof Botman
-   */
+
   dkp_command_giveOrTake(currentUser, channelID, command) {
     let botMessage;
     let modifier = command.split(" ")[0];
@@ -604,11 +555,7 @@ module.exports = class Botman {
     }
     this.sendMessage(channelID, botMessage, msgColor);
   }
-  /**
-   * Saves the current user data with DKP scores
-   *
-   * @memberof Botman
-   */
+
   saveScoresToJSON() {
     this.dkpScores.users.sort(this.dynamicSort("-dkp"));
     let json = JSON.stringify(this.dkpScores);
@@ -635,12 +582,7 @@ module.exports = class Botman {
       return result * sortOrder;
     };
   }
-  /**
-   * Just a string template for the DKP commands to be called
-   *
-   * @returns {string} botMessage - the whole message as a string
-   * @memberof Botman
-   */
+
   dkp_command_default() {
     let botMessage =
       "Dragon Killing Master God is: <@" +
