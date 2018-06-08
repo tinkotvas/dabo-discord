@@ -97,7 +97,7 @@ module.exports = class Botman {
 
     this.bot.sendMessage({
       to: channelID,
-      embed: embed
+      embed
     });
   }
 
