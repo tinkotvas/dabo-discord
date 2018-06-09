@@ -70,6 +70,12 @@ module.exports = class Botman {
     });
   }
 
+  command_roll(user, channelID, message) {	   
+    let roll = Math.floor(Math.random() * 100) + 1;	     
+    let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;	   
+    this.sendMessage(channelID, botMessage);	   
+  }
+
   sendMessage(channelID, botMessage, color = "pink") {
     let colors = {
       red: 16711680,
