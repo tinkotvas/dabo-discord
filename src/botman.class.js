@@ -498,6 +498,14 @@ module.exports = class Botman {
     let modifier = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
     let targetUser = command.split(" ")[2];
+
+    //perhaps it tried give/take <username> <amount> instead
+    //worth a try since otherwise the command is invalid anyway
+    if(!amount){
+      targetUser = command.split(" ")[1]
+      amount = parseInt(command.split(" ")[2])
+    }
+
     let num = 3;
     while (command.split(" ")[num]) {
       targetUser += ` ${command.split(" ")[num]}`;
@@ -537,10 +545,10 @@ module.exports = class Botman {
 
       if (users[userIndex].bank.dkp >= amount) {
         users[userIndex].bank.dkp -= amount;
-        if (modifier == "give") {
+        if (modifier == "give" || modifier == "g") {
           users[targetUserIndex].dkp += amount;
           botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
-        } else if (modifier == "take") {
+        } else if (modifier == "take" || modifier == "t") {
           users[targetUserIndex].dkp -= Math.floor(amount / 2);
           botMessage = `\`\`\`diff\n+ Took ${Math.floor(amount / 2)} DKP from `;
         }
