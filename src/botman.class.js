@@ -600,7 +600,9 @@ module.exports = class Botman {
     this.getTopDkpUser();
     this.dkpScores.users.sort(this.dynamicSort("-dkp"));
     let json = JSON.stringify(this.dkpScores);
-    fs.writeFile("dkp.json", json, "utf8");
+    fs.writeFile("dkp.json", json, "utf8", err => {
+      if(err) console.log("Error saving to file. this.dkpScores:", this.dkpScores)
+    });
   }
 
   dynamicSort(property) {
