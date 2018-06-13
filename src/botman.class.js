@@ -526,12 +526,13 @@ module.exports = class Botman {
       num += 1;
     }
 
-    if (amount > this.maxDailyDKP * 2) {
-      botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP *
-        2}\`\`\``;
-      this.sendMessage(channelID, botMessage, "red");
-      return;
-    }
+    // if (amount > this.maxDailyDKP * 2) {
+    //   botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP *
+    //     2}\`\`\``;
+    //   this.sendMessage(channelID, botMessage, "red");
+    //   return;
+    // }
+
     RegExp(`^${targetUser}$`, "i").test(currentUser);
     if (RegExp(`^${targetUser}$`, "i").test(currentUser)) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
@@ -557,8 +558,15 @@ module.exports = class Botman {
         users[userIndex].bank.lastUpdate = now;
       }
 
-      if (users[userIndex].bank.dkp >= amount) {
-        users[userIndex].bank.dkp -= amount;
+      if ((users[userIndex].bank.dkp + users[userIndex].dkp) >= amount) {
+
+        if(users[userIndex].bank.dkp < amount){
+          users[userIndex].dkp -= amount - users[userIndex].bank.dkp
+          users[userIndex].bank.dkp = 0
+        }else{
+          users[userIndex].bank.dkp -= amount;
+        }
+
         if (modifier == "give" || modifier == "g") {
           users[targetUserIndex].dkp += amount;
           botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
@@ -568,7 +576,7 @@ module.exports = class Botman {
         }
         botMessage += `${targetUser}, you now have ${
           users[userIndex].bank.dkp
-        } more DKP to give or take today.\`\`\``;
+        } more DKP to give or take from your daily quota today.\`\`\``;
         this.saveScoresToJSON();
 
         log.notice(
