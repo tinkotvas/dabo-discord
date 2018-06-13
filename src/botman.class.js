@@ -277,7 +277,8 @@ module.exports = class Botman {
     }
     let botMessage = `__Current Dragon Killing Master God__\n\n<@${
       this.getTopDkpUser().id
-    }>\n\n`;
+    }>\n\n
+    Record score is: ${this.dkpScores.record.score} by ${this.dkpScores.record.username}`;
     botMessage += "```glsl\n";
     botMessage += table(tableUsers, { align: ["l", "l", "r"] }) + "```";
     this.sendMessage(channelID, botMessage);
@@ -596,6 +597,7 @@ module.exports = class Botman {
   }
 
   saveScoresToJSON() {
+    this.getTopDkpUser();
     this.dkpScores.users.sort(this.dynamicSort("-dkp"));
     let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8");
@@ -620,6 +622,10 @@ module.exports = class Botman {
       if (bestScorer.dkp < user.dkp) {
         bestScorer = user;
       }
+    }
+    if(this.dkpScores.record.score < bestScorer.dkp){
+      this.dkpScores.record.username = bestScorer.username;
+      this.dkpScores.record.score = bestScorer.dkp;
     }
     return bestScorer;
   }
