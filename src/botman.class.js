@@ -123,7 +123,16 @@ module.exports = class Botman {
             bank: {
               lastUpdate: new Date(new Date().toJSON().split("T")[0]),
               dkp: this.maxDailyDKP
-            }
+            },
+            sellsoul: {
+              lastUpdate: new Date(0)
+            },
+            blessOrCurse: {
+              lastUpdate: new Date(0)
+            },
+            inventory: { 
+              1: 0
+             }
           });
           index = users.length - 1;
           break;
@@ -401,6 +410,11 @@ module.exports = class Botman {
     let userIndex = this.findOrCreateUser(user);
     let amount = parseInt(commands.split(" ")[1]);
     let choice = commands.split(" ")[2];
+
+    //quick bugfix
+    if(!users[userIndex].inventory){
+      users[userIndex].inventory = { 1:0 }
+    }
 
     if (
       (choice == "high" ||
