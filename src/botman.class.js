@@ -57,8 +57,8 @@ module.exports = class Botman {
             "green"
           );
         },
-        dkp: () => {
-          this.dkp_commands(user, channelID, message);
+        play: () => {
+          this.play_commands(user, channelID, message);
         },
         default: () => {
           this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
@@ -68,12 +68,6 @@ module.exports = class Botman {
         ? activeCommands[command]()
         : activeCommands["default"]();
     });
-  }
-
-  command_roll(user, channelID, message) {	   
-    let roll = Math.floor(Math.random() * 100) + 1;	     
-    let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;	   
-    this.sendMessage(channelID, botMessage);	   
   }
 
   sendMessage(channelID, botMessage, color = "pink") {
@@ -142,16 +136,9 @@ module.exports = class Botman {
     return index;
   }
 
-  // registerShedules() {
-  //   let givePoints = schedule.scheduleJob("00 00 00 00 00", function() {
-
-  //     this.registerShedules();
-  //   });
-  // }
-
-  dkp_commands(user, channelID, message) {
-    let commands = message.split("!dkp ")[1];
-    let command = message.split("!dkp ")[1];
+  play_commands(user, channelID, message) {
+    let commands = message.split("!play ")[1];
+    let command = message.split("!play ")[1];
     if (typeof commands != "undefined") {
       command = commands.split(" ")[0];
     }
@@ -266,30 +253,50 @@ module.exports = class Botman {
   }
 
   dkp_command_list(channelID) {
-    let tableUsers = [["#", "User", "DKP"]];
     let count = 1;
+    let topDkp = this.getTopDkpUser();
+    let botMessage = '';
+
+    let usersTable = [["#", "User", "DKP"]];
     for (let user of this.dkpScores.users) {
       if (user.dkp == 0) {
         continue;
       }
-      tableUsers.push([count, user.username, user.dkp]);
+      usersTable.push([count, user.username, (user.dkp).toLocaleString()]);
       count++;
     }
-    let botMessage = `__Current Dragon Killing Master God__\n\n<@${
-      this.getTopDkpUser().id
-    }>\n\n
-    Record score is: ${this.dkpScores.record.score} by ${this.dkpScores.record.username}`;
     botMessage += "```glsl\n";
-    botMessage += table(tableUsers, { align: ["l", "l", "r"] }) + "```";
+    botMessage += table(usersTable, { align: ["l", "l", "r"] }) + "```";
+
+    // let dragonGodTable = [ ['# Dragon Killing God'],
+    //                         ['#', 'DKP'],
+    //                   ['1  '+topDkp.username, (topDkp.dkp).toLocaleString()]]
+    // botMessage += `\`\`\`glsl\n`
+    // botMessage += table(dragonGodTable, { align: ['l', 'r']}) + "```";
+
+    let recordHolderTable = [['#  All-time best DKP'],['#', 'DKP'],['   '+ this.dkpScores.record.username,(this.dkpScores.record.score).toLocaleString()]]
+    botMessage += `\`\`\`glsl\n`
+    botMessage += table(recordHolderTable, { align: ['l', 'r']}) + "```";
     this.sendMessage(channelID, botMessage);
   }
 
   dkp_command_shop(user, channelID, commands) {
     let users = this.dkpScores.users;
     let userIndex = this.findOrCreateUser(user);
-    let numberOfShopItems = 1;
-    let cost = 100;
+    
+    let cost = 1000;
     let amountPerPurchase = 3;
+
+    let items = {
+      1: {
+        name: 'Lucky Number 7',
+        description: 'Wins with 7 on high and low.'
+      }
+    }
+
+    let numberOfShopItems = Object.keys(items).length;
+
+
     if (!users[userIndex].inventory) {
       users[userIndex].inventory = {};
     }
@@ -319,36 +326,38 @@ module.exports = class Botman {
       }
 
       if (choice == "inventory" || choice == "i") {
-        let botMessage = "Your inventory\n```diff\n";
+        let botMessage = "```glsl\n";
+        let inventoryTable = [["", "Inventory", ""],["#", "Item", "Amount"]];
         for (let i = 1; i <= numberOfShopItems; i++) {
           if (users[userIndex].inventory[i]) {
-            botMessage +=
-              "Item number " +
-              i +
-              " charges: " +
-              users[userIndex].inventory[i] +
-              "\n";
+            inventoryTable.push([i, items[i].name ,users[userIndex].inventory[i]])
           }
         }
-        botMessage += "\n```";
+        botMessage += table(inventoryTable, { align: ["l", "l", "r"] }) + "```";
         this.sendMessage(channelID, botMessage);
       }
     } else {
       let botMessage =
-        "Welcome to the shop, please stay a while" +
         "\n```diff\n" +
-        "\nYou buy with the command:" +
-        "\n!dkp shop buy <nr> <amount>" +
-        "\n!dkp shop buy 1" +
-        "\n!dkp shop buy 1 3" +
-        "\n\nOffers:" +
-        "\n\n1 - Lucky #7 - 100dkp" +
-        "\n   The number 7 seems to be both high and low (3 uses)" +
+        "\nShop commands:" +
+        "\n!play shop/s buy/b <#> <amount> - Buy item nr # and the amount" +
+        "\n!play inventory/i               - Shows you your inventory\n\nExample: " +
+        "\n!play s b 1 3 - Will buy you 3x of item nr 1" +
+        "\n!play s i     - Will show you your inventory```" +
+        "```glsl\n\nOffers:\n";
+      let offersTable = [['#', 'Name', 'Description']];
+
+      for (let i = 1; i <= numberOfShopItems; i++){
+        offersTable.push([i, items[i].name, items[i].description])
+      }
+      botMessage += table(offersTable, { align: ["l", "l", "l"] }) + "```";
+        // "\n\nOffers:" +
+        // "\n\n1 - Lucky Number 7 - 100dkp" +
+        // "\n   The number 7 seems to be both high and low (3 uses)" +
         // "\n\n2 - Low-tilted Dices - 100dkp" +
         // "\n   Low numbers seem oddly favorable? (3 uses)" +
         // "\n\n3 - High-tilted Dices - 100dkp" +
         // "\n   High numbers seem to come more often? (3 uses)" +
-        "\n```";
       this.sendMessage(channelID, botMessage);
     }
     this.saveScoresToJSON();
@@ -441,7 +450,7 @@ module.exports = class Botman {
         "<:d6:432210699264196625>"
       ];
 
-      let botMessage = `You place a ${amount} DKP bet on ${
+      let botMessage = `${user} places a ${amount.toLocaleString()} DKP bet on ${
         choice == "h" || choice == "l"
           ? choice == "h"
             ? (choice = "high")
@@ -457,7 +466,7 @@ module.exports = class Botman {
         //win if item number 1 has charges
         winnings = amount * 4;
         users[userIndex].dkp += winnings;
-        botMessage += `Holy smokes, you just won ${winnings} DKP, `;
+        botMessage += `Holy smokes, you just won ${winnings.toLocaleString()} DKP, `;
       } else if (
         (choice == "high" || choice == "h") &&
         (diceSum > 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
@@ -467,7 +476,7 @@ module.exports = class Botman {
         }
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
-        botMessage += `High win, you just won ${winnings} DKP, `;
+        botMessage += `High win, you just won ${winnings.toLocaleString()} DKP, `;
       } else if (
         (choice == "low" || choice == "l") &&
         (diceSum < 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
@@ -477,12 +486,12 @@ module.exports = class Botman {
         }
         winnings = amount * 2;
         users[userIndex].dkp += winnings;
-        botMessage += `Low win, you just won ${winnings} DKP, `;
+        botMessage += `Low win, you just won ${winnings.toLocaleString()} DKP, `;
       } else {
         botMessage += "You loose your hard earned DKP, ";
         msgColor = "red";
       }
-      botMessage += "setting your total to " + users[userIndex].dkp;
+      botMessage += "setting your total to " + (users[userIndex].dkp).toLocaleString();
       this.sendMessage(channelID, botMessage, msgColor);
       this.saveScoresToJSON();
       log.notice(
@@ -643,23 +652,17 @@ module.exports = class Botman {
       this.maxDailyDKP * 2 +
       " DKP!" +
       "\n\ncommands:" +
-      "\n!dkp - show dkp commands" +
-      "\n!dkp list - list all users and their DKP" +
-      "\n!dkp give/g <amount> <user> - give DKP" +
-      "\n!dkp take/t <amount> <user> - take DKP (50% DR)" +
-      "\n!dkp dice/d <amount> h/high/l/low/7 - feeling lucky?" +
+      "\n!play list/l                 - list all users and their DKP" +
+      "\n!play dice/d <amount> h/l/7  - feeling lucky?" +
+      "\n!play shop/s                 - Go to the shop" +
       "\n\nexamples:" +
-      "\n!dkp give 200 Tin" +
-      "\n!dkp g 200 Tin" +
-      "\n!dkp take 100 Lazoul" +
-      "\n!dkp t 100 Lazoul" +
-      "\n!dkp dice 500 l" +
-      "\n!dkp d 300 h" +
-      "\n!dkp d 500 7" +
+      "\n!play g 200 Tin    - Gives 200 DKP to Tin" +
+      "\n!play t 100 Lazoul - Takes 50 DKP from Lazol" +
+      "\n!play d 500 h      - Dices 500DKP on High" +
       "\n\ndaily commands:" +
-      "\n!dkp bless - bless the leaderboard" +
-      "\n!dkp curse - curse the leadeboard" +
-      "\n!dkp sellsoul/ss - sell your soul (only at 0 DKP)" +
+      "\n!play bless       - bless the leaderboard" +
+      "\n!play curse       - curse the leadeboard" +
+      "\n!play sellsoul/ss - sell your soul (only at 0 DKP)" +
       "```";
     return botMessage;
   }
