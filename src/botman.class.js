@@ -3,11 +3,13 @@ const fs = require("fs");
 const table = require("text-table");
 const schedule = require("node-schedule");
 const Log = require("log");
+const rp = require('request-promise');
 const log = new Log(
   "debug" | "info" | "warning" | "error",
   // save to file, bad idea
- // fs.createWriteStream(`./log/${Date.now()}.log`)
+  // fs.createWriteStream(`./log/${Date.now()}.log`)
 );
+
 
 module.exports = class Botman {
   constructor(authToken) {
@@ -24,6 +26,73 @@ module.exports = class Botman {
       this.dkpScores = JSON.parse(data);
     });
     this.maxDailyDKP = 500;
+  }
+
+  nightwave(channelID) {
+    rp({
+      uri: `https://api.warframestat.us/pc/nightwave`,
+      json: true
+    }).then(res => {
+      var options = {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        hour: 'numeric',
+        minute: 'numeric'
+      }
+      const ends = new Date(res.activeChallenges.slice(-1)[0].expiry).toLocaleString("sv-SE", options)
+      let usersTable = [
+        ["[Description]", "[Reputation]"]
+      ];
+
+      let lazyDoOnce = true;
+      const challenges = res.activeChallenges.sort((a, b) => b.reputation - a.reputation)
+        .reduce((acc, challenge) => {
+          if (challenge.reputation < 2000 && lazyDoOnce) {
+            acc.push(["[Daily challenges]", ""])
+            lazyDoOnce = false;
+          }
+          acc.push([challenge.desc, challenge.reputation])
+          return acc
+        }, usersTable)
+      let botMessage = "```css\n";
+      botMessage += table(challenges, {
+        align: ["l", "r"]
+      }) + "```\n";
+      botMessage += "```ini\n[Nightwave ends: " + ends + "]```"
+      this.sendMessage(channelID, botMessage);
+    })
+  }
+
+  baro(channelID) {
+    rp({
+      uri: `https://api.warframestat.us/pc/voidTrader`,
+      json: true
+    }).then(res => {
+      console.log(res)
+      let botMessage = "";
+      let msgColor = "red"
+
+      if (res.active) {
+        botMessage += "```ini\nBaro Ki'Teer is here on [" + res.location + "]```";
+        msgColor = "green"
+      } else {
+        botMessage += "```ini\nBaro will be here in [" + res.startString + "]\nAnd will land on [" + res.location + "]```";
+      }
+      this.sendMessage(channelID, botMessage, msgColor);
+    })
+  }
+
+  cetus(channelID) {
+    rp({
+      method: "GET",
+      uri: `https://api.warframestat.us/pc/cetusCycle`,
+      json: true
+    }).then(res => {
+      const timeOfDay = res.isDay ? 'day' : 'night';
+      const msgColor = res.isDay ? 'red' : 'green';
+      this.sendMessage(channelID, `\`\`\`diff\nIt's currently ${timeOfDay} with ${res.timeLeft} left\`\`\``, msgColor);
+    })
   }
 
   messageHandler() {
@@ -44,7 +113,7 @@ module.exports = class Botman {
             return;
           }
           var exec = require("child_process").execFile;
-          exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function(
+          exec(`C:\\Program Files (x86)\\TeamViewer\\TeamViewer.exe`, function (
             err,
             data
           ) {
@@ -60,13 +129,28 @@ module.exports = class Botman {
         play: () => {
           this.play_commands(user, channelID, message);
         },
+        cetus: () => {
+          this.cetus(channelID);
+        },
+        nw: () => {
+          this.nightwave(channelID);
+        },
+        nightwave: () => {
+          this.nightwave(channelID);
+        },
+        b: () => {
+          this.baro(channelID);
+        },
+        baro: () => {
+          this.baro(channelID);
+        },
         default: () => {
           this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
         }
       };
-      typeof activeCommands[command] == "function"
-        ? activeCommands[command]()
-        : activeCommands["default"]();
+      typeof activeCommands[command] == "function" ?
+        activeCommands[command]() :
+        activeCommands["default"]();
     });
   }
 
@@ -124,9 +208,9 @@ module.exports = class Botman {
             blessOrCurse: {
               lastUpdate: new Date(0)
             },
-            inventory: { 
+            inventory: {
               1: 0
-             }
+            }
           });
           index = users.length - 1;
           break;
@@ -196,9 +280,16 @@ module.exports = class Botman {
     //   activeCommands[key.charAt(0)] = activeCommands[key]
     // });
 
-    typeof activeCommands[command] == "function"
-      ? activeCommands[command]()
-      : activeCommands["default"]();
+    typeof activeCommands[command] == "function" ?
+      activeCommands[command]() :
+      activeCommands["default"]();
+  }
+
+
+  command_roll(user, channelID, message) {
+    let roll = Math.floor(Math.random() * 100) + 1;
+    let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
+    this.sendMessage(channelID, botMessage);
   }
 
   dkp_command_bless_or_curse(user, channelID, command) {
@@ -213,8 +304,8 @@ module.exports = class Botman {
     let now = new Date(new Date().toJSON().split("T")[0]);
     let then = new Date(
       new Date(newUser || users[userIndex].blessOrCurse.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000) {
       users.forEach(user => {
@@ -230,14 +321,14 @@ module.exports = class Botman {
         this.sendMessage(
           channelID,
           user +
-            " blesses everybody for their valiant effort slaying dragons. May the sun shine bright on you! (+5% DKP)",
+          " blesses everybody for their valiant effort slaying dragons. May the sun shine bright on you! (+5% DKP)",
           "green"
         );
       } else {
         this.sendMessage(
           channelID,
           user +
-            " curses everybody hoarding DKP! May everyone turn to ash in eternal hellfire. (-5% DKP)",
+          " curses everybody hoarding DKP! May everyone turn to ash in eternal hellfire. (-5% DKP)",
           "red"
         );
       }
@@ -247,7 +338,7 @@ module.exports = class Botman {
       this.sendMessage(
         channelID,
         user +
-          ", you have already excercised your divine right on this glorious day."
+        ", you have already excercised your divine right on this glorious day."
       );
     }
   }
@@ -257,7 +348,9 @@ module.exports = class Botman {
     let topDkp = this.getTopDkpUser();
     let botMessage = '';
 
-    let usersTable = [["#", "User", "DKP"]];
+    let usersTable = [
+      ["#", "User", "DKP"]
+    ];
     for (let user of this.dkpScores.users) {
       if (user.dkp == 0) {
         continue;
@@ -266,7 +359,9 @@ module.exports = class Botman {
       count++;
     }
     botMessage += "```glsl\n";
-    botMessage += table(usersTable, { align: ["l", "l", "r"] }) + "```";
+    botMessage += table(usersTable, {
+      align: ["l", "l", "r"]
+    }) + "```";
 
     // let dragonGodTable = [ ['# Dragon Killing God'],
     //                         ['#', 'DKP'],
@@ -274,16 +369,22 @@ module.exports = class Botman {
     // botMessage += `\`\`\`glsl\n`
     // botMessage += table(dragonGodTable, { align: ['l', 'r']}) + "```";
 
-    let recordHolderTable = [['#  All-time best DKP'],['#', 'DKP'],['   '+ this.dkpScores.record.username,(this.dkpScores.record.score).toLocaleString()]]
+    let recordHolderTable = [
+      ['#  All-time best DKP'],
+      ['#', 'DKP'],
+      ['   ' + this.dkpScores.record.username, (this.dkpScores.record.score).toLocaleString()]
+    ]
     botMessage += `\`\`\`glsl\n`
-    botMessage += table(recordHolderTable, { align: ['l', 'r']}) + "```";
+    botMessage += table(recordHolderTable, {
+      align: ['l', 'r']
+    }) + "```";
     this.sendMessage(channelID, botMessage);
   }
 
   dkp_command_shop(user, channelID, commands) {
     let users = this.dkpScores.users;
     let userIndex = this.findOrCreateUser(user);
-    
+
     let cost = 1000;
     let amountPerPurchase = 3;
 
@@ -327,13 +428,18 @@ module.exports = class Botman {
 
       if (choice == "inventory" || choice == "i") {
         let botMessage = "```glsl\n";
-        let inventoryTable = [["", "Inventory", ""],["#", "Item", "Amount"]];
+        let inventoryTable = [
+          ["", "Inventory", ""],
+          ["#", "Item", "Amount"]
+        ];
         for (let i = 1; i <= numberOfShopItems; i++) {
           if (users[userIndex].inventory[i]) {
-            inventoryTable.push([i, items[i].name ,users[userIndex].inventory[i]])
+            inventoryTable.push([i, items[i].name, users[userIndex].inventory[i]])
           }
         }
-        botMessage += table(inventoryTable, { align: ["l", "l", "r"] }) + "```";
+        botMessage += table(inventoryTable, {
+          align: ["l", "l", "r"]
+        }) + "```";
         this.sendMessage(channelID, botMessage);
       }
     } else {
@@ -345,19 +451,23 @@ module.exports = class Botman {
         "\n!play s b 1 3 - Will buy you 3x of item nr 1" +
         "\n!play s i     - Will show you your inventory```" +
         "```glsl\n\nOffers:\n";
-      let offersTable = [['#', 'Name', 'Description']];
+      let offersTable = [
+        ['#', 'Name', 'Description']
+      ];
 
-      for (let i = 1; i <= numberOfShopItems; i++){
+      for (let i = 1; i <= numberOfShopItems; i++) {
         offersTable.push([i, items[i].name, items[i].description])
       }
-      botMessage += table(offersTable, { align: ["l", "l", "l"] }) + "```";
-        // "\n\nOffers:" +
-        // "\n\n1 - Lucky Number 7 - 100dkp" +
-        // "\n   The number 7 seems to be both high and low (3 uses)" +
-        // "\n\n2 - Low-tilted Dices - 100dkp" +
-        // "\n   Low numbers seem oddly favorable? (3 uses)" +
-        // "\n\n3 - High-tilted Dices - 100dkp" +
-        // "\n   High numbers seem to come more often? (3 uses)" +
+      botMessage += table(offersTable, {
+        align: ["l", "l", "l"]
+      }) + "```";
+      // "\n\nOffers:" +
+      // "\n\n1 - Lucky Number 7 - 100dkp" +
+      // "\n   The number 7 seems to be both high and low (3 uses)" +
+      // "\n\n2 - Low-tilted Dices - 100dkp" +
+      // "\n   Low numbers seem oddly favorable? (3 uses)" +
+      // "\n\n3 - High-tilted Dices - 100dkp" +
+      // "\n   High numbers seem to come more often? (3 uses)" +
       this.sendMessage(channelID, botMessage);
     }
     this.saveScoresToJSON();
@@ -379,8 +489,8 @@ module.exports = class Botman {
 
     let then = new Date(
       new Date(newUser || users[userIndex].sellsoul.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000 && users[userIndex].dkp == 0) {
       let dice = Math.floor(Math.random() * 1000) + 1;
@@ -422,8 +532,10 @@ module.exports = class Botman {
     let choice = commands.split(" ")[2];
 
     //quick bugfix
-    if(!users[userIndex].inventory){
-      users[userIndex].inventory = { 1:0 }
+    if (!users[userIndex].inventory) {
+      users[userIndex].inventory = {
+        1: 0
+      }
     }
 
     if (
@@ -456,10 +568,10 @@ module.exports = class Botman {
             ? (choice = "high")
             : (choice = "low")
           : choice
-      }\n\n`;
+        }\n\n`;
       botMessage += `${diceMapping[diceOne - 1]} on first dice\n${
         diceMapping[diceTwo - 1]
-      } on second dice\n\nGiving you a totalt of ${diceSum}\n\n`;
+        } on second dice\n\nGiving you a totalt of ${diceSum}\n\n`;
 
       let winnings = 0;
       if (choice == 7 && diceSum == 7) {
@@ -496,7 +608,7 @@ module.exports = class Botman {
       this.saveScoresToJSON();
       log.notice(
         `${user} bet ${amount} on ${choice} and ${
-          winnings > 1 ? "winning " + winnings : "loosing it"
+        winnings > 1 ? "winning " + winnings : "loosing it"
         } (DKP:${users[userIndex].dkp})`
       );
     } else {
@@ -504,7 +616,7 @@ module.exports = class Botman {
         this.sendMessage(
           channelID,
           `\`\`\`diff\n- Not enough DKP, you have ${
-            users[userIndex].dkp
+          users[userIndex].dkp
           }\`\`\``,
           "red"
         );
@@ -525,7 +637,7 @@ module.exports = class Botman {
 
     //perhaps it tried give/take <username> <amount> instead
     //worth a try since otherwise the command is invalid anyway
-    if(!amount){
+    if (!amount) {
       targetUser = command.split(" ")[1]
       amount = parseInt(command.split(" ")[2])
     }
@@ -561,19 +673,19 @@ module.exports = class Botman {
       );
       if (Math.abs(now - then) >= 86400000) {
         let dkpToGive =
-          currentUser == this.getTopDkpUser().username
-            ? this.maxDailyDKP * 2
-            : this.maxDailyDKP;
+          currentUser == this.getTopDkpUser().username ?
+          this.maxDailyDKP * 2 :
+          this.maxDailyDKP;
         users[userIndex].bank.dkp = dkpToGive;
         users[userIndex].bank.lastUpdate = now;
       }
 
       if ((users[userIndex].bank.dkp + users[userIndex].dkp) >= amount) {
 
-        if(users[userIndex].bank.dkp < amount){
+        if (users[userIndex].bank.dkp < amount) {
           users[userIndex].dkp -= amount - users[userIndex].bank.dkp
           users[userIndex].bank.dkp = 0
-        }else{
+        } else {
           users[userIndex].bank.dkp -= amount;
         }
 
@@ -586,7 +698,7 @@ module.exports = class Botman {
         }
         botMessage += `${targetUser}, you now have ${
           users[userIndex].bank.dkp
-        } more DKP to give or take from your daily quota today.\`\`\``;
+          } more DKP to give or take from your daily quota today.\`\`\``;
         this.saveScoresToJSON();
 
         log.notice(
@@ -595,7 +707,7 @@ module.exports = class Botman {
       } else {
         botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
           users[userIndex].bank.dkp
-        }\`\`\``;
+          }\`\`\``;
         msgColor = "red";
       }
     } else {
@@ -610,7 +722,7 @@ module.exports = class Botman {
     this.dkpScores.users.sort(this.dynamicSort("-dkp"));
     let json = JSON.stringify(this.dkpScores);
     fs.writeFile("dkp.json", json, "utf8", err => {
-      if(err) console.log("Error saving to file. this.dkpScores:", this.dkpScores)
+      if (err) console.log("Error saving to file. this.dkpScores:", this.dkpScores)
     });
   }
 
@@ -620,7 +732,7 @@ module.exports = class Botman {
       sortOrder = -1;
       property = property.substr(1);
     }
-    return function(a, b) {
+    return function (a, b) {
       var result =
         a[property] < b[property] ? -1 : a[property] > b[property] ? 1 : 0;
       return result * sortOrder;
@@ -628,13 +740,15 @@ module.exports = class Botman {
   }
 
   getTopDkpUser() {
-    let bestScorer = { dkp: -900000 };
+    let bestScorer = {
+      dkp: -900000
+    };
     for (let user of this.dkpScores.users) {
       if (bestScorer.dkp < user.dkp) {
         bestScorer = user;
       }
     }
-    if(this.dkpScores.record.score < bestScorer.dkp){
+    if (this.dkpScores.record.score < bestScorer.dkp) {
       this.dkpScores.record.username = bestScorer.username;
       this.dkpScores.record.score = bestScorer.dkp;
     }
@@ -666,4 +780,5 @@ module.exports = class Botman {
       "```";
     return botMessage;
   }
+
 };
