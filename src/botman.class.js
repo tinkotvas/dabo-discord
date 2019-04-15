@@ -94,6 +94,27 @@ module.exports = class Botman {
     })
   }
 
+  sortie(channelID) {
+    rp({
+      method: "GET",
+      uri: "https://api.warframestat.us/pc/sortie",
+      json: true
+    }).then(res => {
+      const {variants, eta, boss, faction} = res;
+      let botMessage = "```css\n";
+      variants.forEach(variant => {
+        botMessage += (table([[variant.missionType, variant.node]], {align: ["l", "r"]}) + "\n");
+        botMessage += (variant.modifier + "\n");
+        botMessage += (variant.modifierDescription + "\n");
+        botMessage += "\n";
+      });
+      botMessage += ("Faction: " + faction + "\n");
+      botMessage += ("Boss: " + boss + "\n");
+      botMessage += ("Time left: " + eta + "```");
+      this.sendMessage(channelID, botMessage);
+    });
+  }
+
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
       if (
@@ -102,6 +123,7 @@ module.exports = class Botman {
       )
         return;
       let command = message.substring(1).split(" ")[0];
+      if (/so+rti+e+/.test(command)) command = "sortie";
       const activeCommands = {
         roll: () => {
           this.command_roll(user, channelID, message);
@@ -142,6 +164,9 @@ module.exports = class Botman {
         },
         baro: () => {
           this.baro(channelID);
+        },
+        sortie: () => {
+          this.sortie(channelID);
         },
         default: () => {
           this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
