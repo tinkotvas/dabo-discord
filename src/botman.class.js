@@ -69,7 +69,6 @@ module.exports = class Botman {
       uri: `https://api.warframestat.us/pc/voidTrader`,
       json: true
     }).then(res => {
-      console.log(res)
       let botMessage = "";
       let msgColor = "red"
 
@@ -287,8 +286,21 @@ module.exports = class Botman {
 
 
   command_roll(user, channelID, message) {
-    let roll = Math.floor(Math.random() * 100) + 1;
-    let botMessage = `\`\`\`xl\n${user} rolled ${roll}\`\`\``;
+    let diceOne = Math.floor(Math.random() * 6);
+    let diceTwo = Math.floor(Math.random() * 6);
+    let diceSum = (diceOne + diceTwo) + 2;
+
+    //custom emojis added ass :d1: :d2: etc. from img folder
+    let diceMapping = [
+      "<:d1:432210697318039552>",
+      "<:d2:432210699427643393>",
+      "<:d3:432210699540758543>",
+      "<:d4:432210696902803467>",
+      "<:d5:432210696965586954>",
+      "<:d6:432210699264196625>"
+    ];
+
+    let botMessage = `**${user}** rolls the dices.\n\n${diceMapping[diceOne]} ${diceMapping[diceTwo]}\n\nTotal: **${diceSum}**`;
     this.sendMessage(channelID, botMessage);
   }
 
@@ -531,6 +543,9 @@ module.exports = class Botman {
     let amount = parseInt(commands.split(" ")[1]);
     let choice = commands.split(" ")[2];
 
+    if (amount.includes(','))
+      amount = amount.replace(/,/g, '')
+
     //quick bugfix
     if (!users[userIndex].inventory) {
       users[userIndex].inventory = {
@@ -655,7 +670,6 @@ module.exports = class Botman {
     //   return;
     // }
 
-    RegExp(`^${targetUser}$`, "i").test(currentUser);
     if (RegExp(`^${targetUser}$`, "i").test(currentUser)) {
       botMessage = `\`\`\`diff\n- That would be silly, you silly goose.\`\`\``;
       this.sendMessage(channelID, botMessage, "red");
