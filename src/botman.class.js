@@ -21,11 +21,15 @@ module.exports = class Botman {
       log.info("Connecteds as " + this.bot.username + " (" + this.bot.id + ")");
       this.messageHandler();
     });
-    fs.readFile("dkp.json", (err, data) => {
+    fs.readFile("score.json", (err, data) => {
       if (err) throw err;
-      this.dkpScores = JSON.parse(data);
+      this.latinumScores = JSON.parse(data);
     });
-    this.maxDailyDKP = 500;
+    this.maxDailyLatinum = 500;
+  }
+
+  rules(channelID){
+    
   }
 
   nightwave(channelID) {
@@ -55,28 +59,43 @@ module.exports = class Botman {
           acc.push([challenge.desc, challenge.reputation])
           return acc
         }, usersTable)
-      let botMessage = "```css\n";
-      botMessage += table(challenges, {
-        align: ["l", "r"]
-      }) + "```\n";
-      botMessage += "```ini\n[Nightwave ends: " + ends + "]```"
+
+      let botMessage = codeBlock(table(challenges, { align: ["l", "r"] }), 'css')
+      botMessage += codeBlock("[Nightwave challenges reset: " + ends + "]", 'ini')
       this.sendMessage(channelID, botMessage);
     })
   }
 
   baro(channelID) {
+    let botMessage = "";
+    let msgColor = "red"
+    let inventoryTable = [
+      ["[Item]", "[Ducats]"]
+    ];
+
     rp({
       uri: `https://api.warframestat.us/pc/voidTrader`,
       json: true
     }).then(res => {
-      let botMessage = "";
-      let msgColor = "red"
-
       if (res.active) {
-        botMessage += "```ini\nBaro Ki'Teer is here on [" + res.location + "]```";
+        botMessage += codeBlock("Baro Ki'Teer is here on [" + res.location + "]", 'ini');
         msgColor = "green"
+
+        const items = res.inventory.sort((a, b) => b.ducats - a.ducats)
+          .reduce((acc, item) => {
+            /** Mark primed blue with [] */
+            if (item.item.includes('Primed')) {
+              acc.push(['[' + item.item + ']', '[' + item.ducats + ']'])
+            } else {
+              acc.push([item.item, item.ducats])
+            }
+            return acc;
+          }, inventoryTable)
+
+        botMessage += codeBlock(table(items, { align: ["l", "r"] }), 'ini');
+        botMessage += codeBlock("He's leaving in [" + res.endString + "]", 'ini');
       } else {
-        botMessage += "```ini\nBaro will be here in [" + res.startString + "]\nAnd will land on [" + res.location + "]```";
+        botMessage += codeBlock("Baro will be here in [" + res.startString + "]\nAnd will land on [" + res.location + "]", 'ini');
       }
       this.sendMessage(channelID, botMessage, msgColor);
     })
@@ -100,10 +119,10 @@ module.exports = class Botman {
       uri: "https://api.warframestat.us/pc/sortie",
       json: true
     }).then(res => {
-      const {variants, eta, boss, faction} = res;
+      const { variants, eta, boss, faction } = res;
       let botMessage = "```css\n";
       variants.forEach(variant => {
-        botMessage += (table([[variant.missionType, variant.node]], {align: ["l", "r"]}) + "\n");
+        botMessage += (table([[variant.missionType, variant.node]], { align: ["l", "r"] }) + "\n");
         botMessage += (variant.modifier + "\n");
         botMessage += (variant.modifierDescription + "\n");
         botMessage += "\n";
@@ -147,8 +166,14 @@ module.exports = class Botman {
             "green"
           );
         },
+        p: () => {
+          this.play_commands(user, channelID, message);
+        },
         play: () => {
           this.play_commands(user, channelID, message);
+        },
+        c: () => {
+          this.cetus(channelID);
         },
         cetus: () => {
           this.cetus(channelID);
@@ -164,6 +189,9 @@ module.exports = class Botman {
         },
         baro: () => {
           this.baro(channelID);
+        },
+        s: () => {
+          this.sortie(channelID);
         },
         sortie: () => {
           this.sortie(channelID);
@@ -210,7 +238,7 @@ module.exports = class Botman {
   }
 
   findOrCreateUser(username) {
-    let users = this.dkpScores.users;
+    let users = this.latinumScores.users;
     let index = users.findIndex(user =>
       RegExp(`^${user.username}$`, "i").test(username)
     );
@@ -221,15 +249,15 @@ module.exports = class Botman {
           users.push({
             username: this.bot.users[user].username,
             id: this.bot.users[user].id,
-            dkp: 0,
+            play: 0,
             bank: {
               lastUpdate: new Date(new Date().toJSON().split("T")[0]),
-              dkp: this.maxDailyDKP
+              play: this.maxDailyLatinum
             },
             sellsoul: {
               lastUpdate: new Date(0)
             },
-            blessOrCurse: {
+            investOrScam: {
               lastUpdate: new Date(0)
             },
             inventory: {
@@ -245,57 +273,58 @@ module.exports = class Botman {
   }
 
   play_commands(user, channelID, message) {
-    let commands = message.split("!play ")[1];
-    let command = message.split("!play ")[1];
+    let commands = message.split(/^(!play|!p)\s+/)[2];
+    let command = message.split(/^(!play|!p)\s+/)[2];
+
     if (typeof commands != "undefined") {
       command = commands.split(" ")[0];
     }
 
     const activeCommands = {
       shop: () => {
-        this.dkp_command_shop(user, channelID, commands);
+        this.play_command_shop(user, channelID, commands);
       },
       s: () => {
-        this.dkp_command_shop(user, channelID, commands);
+        this.play_command_shop(user, channelID, commands);
       },
-      bless: () => {
-        this.dkp_command_bless_or_curse(user, channelID, command);
+      invest: () => {
+        this.play_command_invest_or_scam(user, channelID, command);
       },
-      curse: () => {
-        this.dkp_command_bless_or_curse(user, channelID, command);
+      scam: () => {
+        this.play_command_invest_or_scam(user, channelID, command);
       },
       list: () => {
-        this.dkp_command_list(channelID);
+        this.play_command_list(channelID);
       },
       l: () => {
-        this.dkp_command_list(channelID);
+        this.play_command_list(channelID);
       },
       sellsoul: () => {
-        this.dkp_command_sellSoul(user, channelID);
+        this.play_command_sellSoul(user, channelID);
       },
       ss: () => {
-        this.dkp_command_sellSoul(user, channelID);
+        this.play_command_sellSoul(user, channelID);
       },
       dice: () => {
-        this.dkp_command_dice(user, channelID, commands);
+        this.play_command_dice(user, channelID, commands);
       },
       d: () => {
-        this.dkp_command_dice(user, channelID, commands);
+        this.play_command_dice(user, channelID, commands);
       },
       give: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
+        this.play_command_giveOrTake(user, channelID, commands);
       },
       g: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
+        this.play_command_giveOrTake(user, channelID, commands);
       },
       take: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
+        this.play_command_giveOrTake(user, channelID, commands);
       },
       t: () => {
-        this.dkp_command_giveOrTake(user, channelID, commands);
+        this.play_command_giveOrTake(user, channelID, commands);
       },
       default: () => {
-        this.sendMessage(channelID, this.dkp_command_default());
+        this.sendMessage(channelID, this.play_command_default());
       }
     };
 
@@ -329,97 +358,84 @@ module.exports = class Botman {
     this.sendMessage(channelID, botMessage);
   }
 
-  dkp_command_bless_or_curse(user, channelID, command) {
-    let users = this.dkpScores.users;
+  play_command_invest_or_scam(user, channelID, command) {
+    let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
     let newUser = false;
 
-    if (!users[userIndex].blessOrCurse) {
-      users[userIndex].blessOrCurse = {};
+    if (!users[userIndex].investOrScam) {
+      users[userIndex].investOrScam = {};
       newUser = true;
     }
     let now = new Date(new Date().toJSON().split("T")[0]);
     let then = new Date(
-      new Date(newUser || users[userIndex].blessOrCurse.lastUpdate)
-      .toJSON()
-      .split("T")[0]
+      new Date(newUser || users[userIndex].investOrScam.lastUpdate)
+        .toJSON()
+        .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000) {
       users.forEach(user => {
-        if (user.dkp > 0) {
-          if (command == "bless") {
-            user.dkp += Math.round(user.dkp * 0.05);
+        if (user.latinum > 0) {
+          if (command == "invest") {
+            user.latinum += Math.round(user.latinum * 0.05);
           } else {
-            user.dkp -= Math.round(user.dkp * 0.05);
+            user.latinum -= Math.round(user.latinum * 0.05);
           }
         }
       });
-      if (command == "bless") {
+      if (command == "invest") {
         this.sendMessage(
           channelID,
           user +
-          " blesses everybody for their valiant effort slaying dragons. May the sun shine bright on you! (+5% DKP)",
+          " invest in a Hupyrian beetle farm that benefits the whole sector. (+5% Latinum)",
           "green"
         );
       } else {
         this.sendMessage(
           channelID,
           user +
-          " curses everybody hoarding DKP! May everyone turn to ash in eternal hellfire. (-5% DKP)",
+          " terrible lobes for business made everybody loose Latinum. (-5% Latinum)",
           "red"
         );
       }
-      users[userIndex].blessOrCurse.lastUpdate = now;
+      users[userIndex].investOrScam.lastUpdate = now;
       this.saveScoresToJSON();
     } else {
       this.sendMessage(
         channelID,
         user +
-        ", you have already excercised your divine right on this glorious day."
+        ", you have already signed your daily contract."
       );
     }
   }
 
-  dkp_command_list(channelID) {
+  play_command_list(channelID) {
     let count = 1;
-    let topDkp = this.getTopDkpUser();
     let botMessage = '';
 
     let usersTable = [
-      ["#", "User", "DKP"]
+      ["#", "User", "Latinum"]
     ];
-    for (let user of this.dkpScores.users) {
-      if (user.dkp == 0) {
+    for (let user of this.latinumScores.users) {
+      if (user.latinum == 0) {
         continue;
       }
-      usersTable.push([count, user.username, (user.dkp).toLocaleString()]);
+      usersTable.push([count, user.username, (user.latinum).toLocaleString()]);
       count++;
     }
-    botMessage += "```glsl\n";
-    botMessage += table(usersTable, {
-      align: ["l", "l", "r"]
-    }) + "```";
-
-    // let dragonGodTable = [ ['# Dragon Killing God'],
-    //                         ['#', 'DKP'],
-    //                   ['1  '+topDkp.username, (topDkp.dkp).toLocaleString()]]
-    // botMessage += `\`\`\`glsl\n`
-    // botMessage += table(dragonGodTable, { align: ['l', 'r']}) + "```";
+    botMessage += codeBlock(table(usersTable, { align: ["l", "l", "r"] }), 'glsl');
 
     let recordHolderTable = [
-      ['#  All-time best DKP'],
-      ['#', 'DKP'],
-      ['   ' + this.dkpScores.record.username, (this.dkpScores.record.score).toLocaleString()]
-    ]
-    botMessage += `\`\`\`glsl\n`
-    botMessage += table(recordHolderTable, {
-      align: ['l', 'r']
-    }) + "```";
+      ['#  All-time biggest wealth'],
+      ['#', 'Latinum'],
+      ['   ' + this.latinumScores.record.username, (this.latinumScores.record.latinum).toLocaleString()]
+    ];
+    botMessage += codeBlock(table(recordHolderTable, {      align: ['l', 'r']    }),'glsl');
     this.sendMessage(channelID, botMessage);
   }
 
-  dkp_command_shop(user, channelID, commands) {
-    let users = this.dkpScores.users;
+  play_command_shop(user, channelID, commands) {
+    let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
 
     let cost = 1000;
@@ -451,10 +467,10 @@ module.exports = class Botman {
           amountPerPurchase = amountPerPurchase * amountOf;
         }
         if (
-          users[userIndex].dkp >= cost &&
+          users[userIndex].latinum >= cost &&
           (choiceNr >= 1 && choiceNr <= numberOfShopItems)
         ) {
-          users[userIndex].dkp -= cost;
+          users[userIndex].latinum -= cost;
           users[userIndex].inventory[choiceNr] += amountPerPurchase;
           this.sendMessage(
             channelID,
@@ -480,14 +496,14 @@ module.exports = class Botman {
         this.sendMessage(channelID, botMessage);
       }
     } else {
-      let botMessage =
-        "\n```diff\n" +
-        "\nShop commands:" +
+      let botMessage = codeBlock(
+        "Shop commands:" +
         "\n!play shop/s buy/b <#> <amount> - Buy item nr # and the amount" +
-        "\n!play inventory/i               - Shows you your inventory\n\nExample: " +
+        "\n!play inventory/i               - Shows you your inventory\n" +
+        "\nExample: " +
         "\n!play s b 1 3 - Will buy you 3x of item nr 1" +
-        "\n!play s i     - Will show you your inventory```" +
-        "```glsl\n\nOffers:\n";
+        "\n!play s i     - Will show you your inventory",'diff')
+        botMessage += "```glsl\n\nOffers:\n";
       let offersTable = [
         ['#', 'Name', 'Description']
       ];
@@ -499,19 +515,19 @@ module.exports = class Botman {
         align: ["l", "l", "l"]
       }) + "```";
       // "\n\nOffers:" +
-      // "\n\n1 - Lucky Number 7 - 100dkp" +
+      // "\n\n1 - Lucky Number 7 - 100latinum" +
       // "\n   The number 7 seems to be both high and low (3 uses)" +
-      // "\n\n2 - Low-tilted Dices - 100dkp" +
+      // "\n\n2 - Low-tilted Dices - 100latinum" +
       // "\n   Low numbers seem oddly favorable? (3 uses)" +
-      // "\n\n3 - High-tilted Dices - 100dkp" +
+      // "\n\n3 - High-tilted Dices - 100latinum" +
       // "\n   High numbers seem to come more often? (3 uses)" +
       this.sendMessage(channelID, botMessage);
     }
     this.saveScoresToJSON();
   }
 
-  dkp_command_sellSoul(user, channelID) {
-    let users = this.dkpScores.users;
+  play_command_sellSoul(user, channelID) {
+    let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
     let newUser = false;
 
@@ -526,18 +542,18 @@ module.exports = class Botman {
 
     let then = new Date(
       new Date(newUser || users[userIndex].sellsoul.lastUpdate)
-      .toJSON()
-      .split("T")[0]
+        .toJSON()
+        .split("T")[0]
     );
-    if (Math.abs(now - then) >= 86400000 && users[userIndex].dkp == 0) {
+    if (Math.abs(now - then) >= 86400000 && users[userIndex].latinum == 0) {
       let dice = Math.floor(Math.random() * 1000) + 1;
       if (dice >= 666 && dice <= 999) {
         this.sendMessage(
           channelID,
-          `You sold your Soul to the Devil and got 666 demons which you converted to DKP.`,
+          `You sold your Soul to the Devil and got 666 demons which you converted to Latinum.`,
           "green"
         );
-        users[userIndex].dkp += 666;
+        users[userIndex].latinum += 666;
       } else {
         this.sendMessage(
           channelID,
@@ -547,7 +563,7 @@ module.exports = class Botman {
       }
       users[userIndex].sellsoul.lastUpdate = now;
       this.saveScoresToJSON();
-    } else if (users[userIndex].dkp > 0) {
+    } else if (users[userIndex].latinum > 0) {
       this.sendMessage(
         channelID,
         `You must be desperate to be dealing with the Devil, come back when you are.`,
@@ -562,14 +578,16 @@ module.exports = class Botman {
     }
   }
 
-  dkp_command_dice(user, channelID, commands) {
-    let users = this.dkpScores.users;
+  play_command_dice(user, channelID, commands) {
+    let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
-    let amount = parseInt(commands.split(" ")[1]);
+    let amount = commands.split(" ")[1];
     let choice = commands.split(" ")[2];
 
     if (amount.includes(','))
       amount = amount.replace(/,/g, '')
+
+    amount = parseInt(amount)
 
     //quick bugfix
     if (!users[userIndex].inventory) {
@@ -584,10 +602,10 @@ module.exports = class Botman {
         choice == "low" ||
         choice == "l" ||
         choice == 7) &&
-      users[userIndex].dkp >= amount
+      users[userIndex].latinum >= amount
     ) {
       let msgColor = "green";
-      users[userIndex].dkp -= amount;
+      users[userIndex].latinum -= amount;
       let diceOne = Math.floor(Math.random() * 6) + 1;
       let diceTwo = Math.floor(Math.random() * 6) + 1;
       let diceSum = diceOne + diceTwo;
@@ -602,7 +620,7 @@ module.exports = class Botman {
         "<:d6:432210699264196625>"
       ];
 
-      let botMessage = `${user} places a ${amount.toLocaleString()} DKP bet on ${
+      let botMessage = `${user} places a ${amount.toLocaleString()} Latinum bet on ${
         choice == "h" || choice == "l"
           ? choice == "h"
             ? (choice = "high")
@@ -617,8 +635,8 @@ module.exports = class Botman {
       if (choice == 7 && diceSum == 7) {
         //win if item number 1 has charges
         winnings = amount * 4;
-        users[userIndex].dkp += winnings;
-        botMessage += `Holy smokes, you just won ${winnings.toLocaleString()} DKP, `;
+        users[userIndex].latinum += winnings;
+        botMessage += `Holy smokes, you just won ${winnings.toLocaleString()} Latinum, `;
       } else if (
         (choice == "high" || choice == "h") &&
         (diceSum > 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
@@ -627,8 +645,8 @@ module.exports = class Botman {
           users[userIndex].inventory[1] -= 1;
         }
         winnings = amount * 2;
-        users[userIndex].dkp += winnings;
-        botMessage += `High win, you just won ${winnings.toLocaleString()} DKP, `;
+        users[userIndex].latinum += winnings;
+        botMessage += `High win, you just won ${winnings.toLocaleString()} Latinum, `;
       } else if (
         (choice == "low" || choice == "l") &&
         (diceSum < 7 || (diceSum == 7 && users[userIndex].inventory[1] >= 1))
@@ -637,26 +655,26 @@ module.exports = class Botman {
           users[userIndex].inventory[1] -= 1;
         }
         winnings = amount * 2;
-        users[userIndex].dkp += winnings;
-        botMessage += `Low win, you just won ${winnings.toLocaleString()} DKP, `;
+        users[userIndex].latinum += winnings;
+        botMessage += `Low win, you just won ${winnings.toLocaleString()} Latinum, `;
       } else {
-        botMessage += "You loose your hard earned DKP, ";
+        botMessage += "You loose your hard earned Latinum, ";
         msgColor = "red";
       }
-      botMessage += "setting your total to " + (users[userIndex].dkp).toLocaleString();
+      botMessage += "setting your total to " + (users[userIndex].latinum).toLocaleString();
       this.sendMessage(channelID, botMessage, msgColor);
       this.saveScoresToJSON();
       log.notice(
         `${user} bet ${amount} on ${choice} and ${
         winnings > 1 ? "winning " + winnings : "loosing it"
-        } (DKP:${users[userIndex].dkp})`
+        } (Latinum:${users[userIndex].latinum})`
       );
     } else {
-      if (users[userIndex].dkp <= amount)
+      if (users[userIndex].latinum <= amount)
         this.sendMessage(
           channelID,
-          `\`\`\`diff\n- Not enough DKP, you have ${
-          users[userIndex].dkp
+          `\`\`\`diff\n- Not enough Latinum, you have ${
+          users[userIndex].latinum
           }\`\`\``,
           "red"
         );
@@ -669,7 +687,7 @@ module.exports = class Botman {
     }
   }
 
-  dkp_command_giveOrTake(currentUser, channelID, command) {
+  play_command_giveOrTake(currentUser, channelID, command) {
     let botMessage;
     let modifier = command.split(" ")[0];
     let amount = parseInt(command.split(" ")[1]);
@@ -688,8 +706,8 @@ module.exports = class Botman {
       num += 1;
     }
 
-    // if (amount > this.maxDailyDKP * 2) {
-    //   botMessage = `\`\`\`diff\n- Too much DKP, max ${this.maxDailyDKP *
+    // if (amount > this.maxDailyLatinum * 2) {
+    //   botMessage = `\`\`\`diff\n- Too much Latinum, max ${this.maxDailyLatinum *
     //     2}\`\`\``;
     //   this.sendMessage(channelID, botMessage, "red");
     //   return;
@@ -701,7 +719,7 @@ module.exports = class Botman {
       return;
     }
 
-    let users = this.dkpScores.users;
+    let users = this.latinumScores.users;
     let targetUserIndex = this.findOrCreateUser(targetUser);
     let userIndex = this.findOrCreateUser(currentUser);
     let msgColor = "pink";
@@ -711,41 +729,41 @@ module.exports = class Botman {
         new Date(users[userIndex].bank.lastUpdate).toJSON().split("T")[0]
       );
       if (Math.abs(now - then) >= 86400000) {
-        let dkpToGive =
-          currentUser == this.getTopDkpUser().username ?
-          this.maxDailyDKP * 2 :
-          this.maxDailyDKP;
-        users[userIndex].bank.dkp = dkpToGive;
+        let latinumToGive =
+          currentUser == this.getTopLatinumUser().username ?
+            this.maxDailyLatinum * 2 :
+            this.maxDailyLatinum;
+        users[userIndex].bank.latinum = latinumToGive;
         users[userIndex].bank.lastUpdate = now;
       }
 
-      if ((users[userIndex].bank.dkp + users[userIndex].dkp) >= amount) {
+      if ((users[userIndex].bank.latinum + users[userIndex].latinum) >= amount) {
 
-        if (users[userIndex].bank.dkp < amount) {
-          users[userIndex].dkp -= amount - users[userIndex].bank.dkp
-          users[userIndex].bank.dkp = 0
+        if (users[userIndex].bank.latinum < amount) {
+          users[userIndex].latinum -= amount - users[userIndex].bank.latinum
+          users[userIndex].bank.latinum = 0
         } else {
-          users[userIndex].bank.dkp -= amount;
+          users[userIndex].bank.latinum -= amount;
         }
 
         if (modifier == "give" || modifier == "g") {
-          users[targetUserIndex].dkp += amount;
-          botMessage = `\`\`\`diff\n+ Gave ${amount} DKP to `;
+          users[targetUserIndex].latinum += amount;
+          botMessage = `\`\`\`diff\n+ Gave ${amount} Latinum to `;
         } else if (modifier == "take" || modifier == "t") {
-          users[targetUserIndex].dkp -= Math.floor(amount / 2);
-          botMessage = `\`\`\`diff\n+ Took ${Math.floor(amount / 2)} DKP from `;
+          users[targetUserIndex].latinum -= Math.floor(amount / 2);
+          botMessage = `\`\`\`diff\n+ Took ${Math.floor(amount / 2)} Latinum from `;
         }
         botMessage += `${targetUser}, you now have ${
-          users[userIndex].bank.dkp
-          } more DKP to give or take from your daily quota today.\`\`\``;
+          users[userIndex].bank.latinum
+          } more Latinum to give or take from your daily quota today.\`\`\``;
         this.saveScoresToJSON();
 
         log.notice(
           `${currentUser} ${modifier} ${amount} to/from ${targetUser}`
         );
       } else {
-        botMessage = `\`\`\`diff\n- Not enough DKP, you only have ${
-          users[userIndex].bank.dkp
+        botMessage = `\`\`\`diff\n- Not enough Latinum, you only have ${
+          users[userIndex].bank.latinum
           }\`\`\``;
         msgColor = "red";
       }
@@ -757,11 +775,11 @@ module.exports = class Botman {
   }
 
   saveScoresToJSON() {
-    this.getTopDkpUser();
-    this.dkpScores.users.sort(this.dynamicSort("-dkp"));
-    let json = JSON.stringify(this.dkpScores);
-    fs.writeFile("dkp.json", json, "utf8", err => {
-      if (err) console.log("Error saving to file. this.dkpScores:", this.dkpScores)
+    this.getTopLatinumUser();
+    this.latinumScores.users.sort(this.dynamicSort("-latinum"));
+    let json = JSON.stringify(this.latinumScores);
+    fs.writeFile("score.json", json, "utf8", err => {
+      if (err) console.log("Error saving to file. this.latinumScores:", this.latinumScores)
     });
   }
 
@@ -778,46 +796,52 @@ module.exports = class Botman {
     };
   }
 
-  getTopDkpUser() {
+  getTopLatinumUser() {
     let bestScorer = {
-      dkp: -900000
+      latinum: -900000
     };
-    for (let user of this.dkpScores.users) {
-      if (bestScorer.dkp < user.dkp) {
+    for (let user of this.latinumScores.users) {
+      console.log("USER",user)
+      if (bestScorer.latinum < user.latinum) {
         bestScorer = user;
       }
     }
-    if (this.dkpScores.record.score < bestScorer.dkp) {
-      this.dkpScores.record.username = bestScorer.username;
-      this.dkpScores.record.score = bestScorer.dkp;
+    if (this.latinumScores.record.latinum < bestScorer.latinum) {
+      this.latinumScores.record.username = bestScorer.username;
+      this.latinumScores.record.latinum = bestScorer.latinum;
     }
+    console.log("BEST",bestScorer)
     return bestScorer;
   }
 
-  dkp_command_default() {
+  play_command_default() {
     let botMessage =
-      "Dragon Killing Master God is: <@" +
-      this.getTopDkpUser().id +
+      "Grand Nagus: <@" +
+      this.getTopLatinumUser().id +
       ">\n```diff\n" +
       "You can give and take a total of " +
-      this.maxDailyDKP +
-      " DKP every day.\nUnless you are top scorer, then it's " +
-      this.maxDailyDKP * 2 +
-      " DKP!" +
+      this.maxDailyLatinum +
+      " Latinum every day.\nUnless you are wealthiest, then it's " +
+      this.maxDailyLatinum * 2 +
+      " Latinum!" +
       "\n\ncommands:" +
-      "\n!play list/l                 - list all users and their DKP" +
+      "\n!play list/l                 - list all users and their Latinum" +
       "\n!play dice/d <amount> h/l/7  - feeling lucky?" +
       "\n!play shop/s                 - Go to the shop" +
       "\n\nexamples:" +
-      "\n!play g 200 Tin    - Gives 200 DKP to Tin" +
-      "\n!play t 100 Lazoul - Takes 50 DKP from Lazol" +
-      "\n!play d 500 h      - Dices 500DKP on High" +
+      "\n!play g 200 Tin    - Gives 200 Latinum to Tin" +
+      "\n!play t 100 Lazoul - Takes 50 Latinum from Lazol" +
+      "\n!play d 500 h      - Dices 500 Latinum on High" +
       "\n\ndaily commands:" +
-      "\n!play bless       - bless the leaderboard" +
-      "\n!play curse       - curse the leadeboard" +
-      "\n!play sellsoul/ss - sell your soul (only at 0 DKP)" +
+      "\n!play invest       - invest for the whole sector" +
+      "\n!play scam       - scam the whole sector, including yourself" +
+      "\n!play sellsoul/ss - sell your soul (only at 0 Latinum)" +
       "```";
     return botMessage;
   }
 
 };
+
+function codeBlock(content, type) {
+  return `\`\`\`${type}\n${content}\`\`\``
+}
