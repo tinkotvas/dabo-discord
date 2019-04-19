@@ -28,8 +28,177 @@ module.exports = class Botman {
     this.maxDailyLatinum = 500;
   }
 
-  rules(channelID){
-    
+  rules(channelID, message) {
+    const rules = {
+      '1': 'Once you have their money... you never give it back.',
+      '2': 'Money is everything.',
+      '3': 'Never spend more for an acquisition than you have to.',
+      '5': 'Always exaggerate your estimates.',
+      '6': 'Never allow family to stand in the way of opportunity.',
+      '7': 'Keep your ears open.',
+      '8': 'Small print leads to large risk.',
+      '9': 'Opportunity plus instinct equals profit.',
+      '10': 'Greed is eternal.',
+      '13': 'Anything worth doing is worth doing for money.',
+      '14': 'Sometimes the quickest way to find profits is to let them find you.',
+      '15': 'Dead men close no deals.',
+      '16': 'A deal is a deal... until a better one comes along.',
+      '17': 'A contract is a contract is a contract... but only between Ferengi',
+      '18': 'A Ferengi without profit is no Ferengi at all.',
+      '19': 'Satisfaction is not guaranteed.',
+      '20': 'He who dives under the table today lives to profit tomorrow.',
+      '21': 'Never place friendship above profit.',
+      '22': 'A wise man can hear profit in the wind.',
+      '23': 'Nothing is more important than your health... except for your money.',
+      '27': 'There\'s nothing more dangerous than an honest businessman.',
+      '29': 'What\'s in it for me?',
+      '30': '\'Confidentiality equals profit.\'',
+      '31': 'Never make fun of a Ferengi\'s mother. Insult something he cares about instead.',
+      '33': 'It never hurts to suck up to the boss.',
+      '34': 'War is good for business.',
+      '35': 'Peace is good for business.',
+      '37': 'The early investor reaps the most interest.',
+      '39': 'Don\'t tell customers more than they need to know.',
+      '40': 'She can touch your lobes but never your latinum.',
+      '41': 'Profit is its own reward.',
+      '43': 'Feed your greed, but not enough to choke it.',
+      '44': 'Never confuse wisdom with luck.',
+      '45': 'Expand or die.*\'',
+      '47': 'Don\'t trust a man wearing a better suit than your own.',
+      '48': 'The bigger the smile, the sharper the knife.',
+      '52': 'Never ask when you can take.',
+      '53': 'Never trust anybody taller than you.',
+      '54': 'Rate divided by time equals profit. (Also known as \'The Velocity of Wealth.\')',
+      '55': 'Take joy from profit, and profit from joy.',
+      '57': 'Good customers are as rare as latinum—treasure them.',
+      '58': 'There is no substitute for success.',
+      '59': 'Free advice is seldom cheap.',
+      '60': 'Keep your lies consistent.',
+      '62': 'The riskier the road, the greater the profit.',
+      '63': 'Work is the best therapy-at least for your employees.',
+      '65': 'Win or lose, there\'s always Huyperian beetle snuff.',
+      '66': 'Someone\'s always got bigger ears.',
+      '68': 'Risk doesn\'t always equal reward.',
+      '69': 'Ferengi are not responsible for the stupidity of other races.',
+      '74': 'Knowledge equals profit.',
+      '75': 'Home is where the heart is... but the stars are made of latinum.',
+      '76': 'Every once in a while, declare peace. It confuses the hell out of your enemies.',
+      '77': 'If you break it, I\'ll charge you for it!',
+      '79': 'Beware of the Vulcan greed for knowledge.',
+      '82': 'The flimsier the product, the higher the price.',
+      '85': 'Never let the competition know what you\'re thinking.',
+      '87': 'Learn the customer\'s weaknesses, so that you can better take advantage of him.',
+      '88': 'Vengeance will cost you everything.',
+      '89': '[It is] better to lose some profit and live than lose all profit and die.',
+      '92': 'There are many paths to profit.',
+      '94': 'Females and finances don\'t mix.',
+      '95': 'Expand or die.',
+      '97': 'Enough... is never enough.',
+      '98': 'If you can\'t take it with you, don\'t go.',
+      '99': 'Trust is the biggest liability of all.',
+      '100': 'When it\'s good for business, tell the truth.',
+      '101': 'Profit trumps emotion.',
+      '102': 'Nature decays, but latinum lasts forever.',
+      '103': 'Sleep can interfere with...',
+      '104': 'Faith moves mountains... of inventory.',
+      '106': 'There is no honor in poverty.',
+      '108': 'A woman wearing clothes is like a man without any profits.',
+      '109': 'Dignity and an empty sack is worth the sack.',
+      '110': 'Exploitation begins at home.',
+      '111': 'Treat people in your debt like family... exploit them.',
+      '112': 'Never have sex with the boss\' sister.',
+      '113': 'Always have sex with the boss.',
+      '117': 'You can\'t free a fish from water.',
+      '121': 'Everything is for sale, even friendship.',
+      '123': 'Even a blind man can recognize the glow of Latinum.',
+      '125': 'You can\'t make a deal if you\'re dead.',
+      '135': 'Listen to secrets, but never repeat them.',
+      '139': 'Wives serve, brothers inherit.',
+      '141': 'Only fools pay retail.',
+      '144': 'There\'s nothing wrong with charity... as long as it winds up in your pocket.',
+      '147': 'People love the bartender.',
+      '151': 'Even when you\'re a customer, sell yourself.',
+      '153': 'Sell the sizzle, not the steak.',
+      '162': 'Even in the worst of times someone turns a profit.',
+      '168': 'Whisper your way to success.',
+      '177': 'Know your enemies... but do business with them always.',
+      '181': 'Not even dishonesty can tarnish the shine of profit.',
+      '183': 'When life hands you ungaberries, make detergent.',
+      '184': 'A Ferengi waits to bid until his opponents have exhausted themselves.',
+      '188': 'Not even dishonesty can tarnish the shine of profit.',
+      '189': 'Let others keep their reputation. You keep their money.',
+      '190': 'Hear all, trust nothing.',
+      '192': 'Never cheat a Klingon... unless you\'re sure you can get away with it.',
+      '193': 'It\'s never too late to fire the staff.',
+      '194': 'It\'s always good business to know about new customers before they walk in your door.',
+      '199': 'Location, location, location.',
+      '200': 'A Ferengi chooses no side but his own',
+      '202': 'The justification for profit is profit.',
+      '203': 'New customers are like razor-toothed gree worms. They can be succulent, but sometimes they bite back.',
+      '208': 'Sometimes, the only thing more dangerous than a question is an answer.',
+      '211': 'Employees are the rungs on the ladder of success. Don\'t hesitate to step on them.',
+      '212': 'A good lie is easier to believe than the truth.',
+      '214': 'Never begin a (business) negotiation on an empty stomach.',
+      '216': 'Never gamble with a telepath.',
+      '217': 'You can\'t free a fish from water.',
+      '218': 'Sometimes what you get free costs entirely too much.',
+      '219': 'Possession is eleven-tenths of the law!',
+      '223': 'Beware the man who doesn\'t take time for Oo-mox.',
+      '227': 'If that\'s what\'s written, then that\'s what\'s written.',
+      '229': 'Latinum lasts longer than lust.',
+      '235': 'Duck; death is tall.',
+      '236': 'You can\'t buy fate.',
+      '239': 'Never be afraid to mislabel a product.',
+      '240': 'Time, like latinum, is a highly limited commodity.',
+      '242': 'More is good... all is better.',
+      '243': 'Always leave yourself an out.',
+      '255': 'A wife is luxury... a smart accountant a neccessity.',
+      '257': 'When the messenger comes to appropriate your profits, kill the messenger.',
+      '261': 'A wealthy man can afford anything except a conscience.',
+      '263': 'Never allow doubt to tarnish your lust for latinum.',
+      '266': 'When in doubt, lie.',
+      '267': 'If you believe it, they believe it.',
+      '272': 'Always inspect the merchandise before making a deal.',
+      '280': 'If it ain\'t broke, don\'t fix it.',
+      '284': 'Deep down, everyone\'s a Ferengi.',
+      '285': 'No good deed ever goes unpunished.',
+      '287': 'Always get somebody else to do the lifting.',
+      '288': 'Never get into anything that you can\'t get out of.',
+      '289': 'A man is only worth the sum of his possessions.',
+      '290': 'An angry man is an enemy, and a satisfied man is an ally.',
+      '291': 'The less employees know about the cash flow, the smaller the share they can demand.',
+      '292': 'Only a fool passes up a business opportunity.',
+      '293': 'The more time they take deciding, the more money they will spend.',
+      '294': 'A bargain usually isn\'t.',
+      '431': 'When the shooting starts, let the mercenaries handle it!'
+    }
+    const number = message.split(/^(!rule|!rules|!r)\s+/)[2];
+    let botMessage =  ""
+    if(rules[number]){
+      botMessage = codeBlock(`# Rules of Acquisition\n${number}. - ${rules[number]}`,'md')
+      this.sendMessage(channelID, botMessage);
+    }else if(number){
+      this.sendMessage(channelID, "Unfortunately our database does not have this Rule of Acquisition")
+    }else{
+      const length = Object.entries(rules).length
+      let one = Math.floor(Math.random() * length);
+      let two = Math.floor(Math.random() * length);
+      let three = Math.floor(Math.random() * length);
+      
+      let rule1 = `${Object.entries(rules)[one]}`.split(',')
+      let rule2 = `${Object.entries(rules)[two]}`.split(',')
+      let rule3 = `${Object.entries(rules)[three]}`.split(',')
+
+      botMessage = codeBlock(`# The RULES OF ACQUISITION
+
+Three random rules for you
+${rule1[0]}. - ${rule1[1]}
+${rule2[0]}. - ${rule2[1]}
+${rule3[0]}. - ${rule3[1]}
+
+!rule digit to look for a specific rule.`,'md')
+      this.sendMessage(channelID, botMessage)
+    }
   }
 
   nightwave(channelID) {
@@ -60,7 +229,9 @@ module.exports = class Botman {
           return acc
         }, usersTable)
 
-      let botMessage = codeBlock(table(challenges, { align: ["l", "r"] }), 'css')
+      let botMessage = codeBlock(table(challenges, {
+        align: ["l", "r"]
+      }), 'css')
       botMessage += codeBlock("[Nightwave challenges reset: " + ends + "]", 'ini')
       this.sendMessage(channelID, botMessage);
     })
@@ -92,7 +263,9 @@ module.exports = class Botman {
             return acc;
           }, inventoryTable)
 
-        botMessage += codeBlock(table(items, { align: ["l", "r"] }), 'ini');
+        botMessage += codeBlock(table(items, {
+          align: ["l", "r"]
+        }), 'ini');
         botMessage += codeBlock("He's leaving in [" + res.endString + "]", 'ini');
       } else {
         botMessage += codeBlock("Baro will be here in [" + res.startString + "]\nAnd will land on [" + res.location + "]", 'ini');
@@ -119,10 +292,19 @@ module.exports = class Botman {
       uri: "https://api.warframestat.us/pc/sortie",
       json: true
     }).then(res => {
-      const { variants, eta, boss, faction } = res;
+      const {
+        variants,
+        eta,
+        boss,
+        faction
+      } = res;
       let botMessage = "```css\n";
       variants.forEach(variant => {
-        botMessage += (table([[variant.missionType, variant.node]], { align: ["l", "r"] }) + "\n");
+        botMessage += (table([
+          [variant.missionType, variant.node]
+        ], {
+          align: ["l", "r"]
+        }) + "\n");
         botMessage += (variant.modifier + "\n");
         botMessage += (variant.modifierDescription + "\n");
         botMessage += "\n";
@@ -165,6 +347,15 @@ module.exports = class Botman {
             "```diff\nAs you command, my lord```",
             "green"
           );
+        },
+        r: () => {
+          this.rules(channelID, message);
+        },
+        rule: () => {
+          this.rules(channelID, message);
+        },
+        rules: () => {
+          this.rules(channelID, message);
         },
         p: () => {
           this.play_commands(user, channelID, message);
@@ -370,8 +561,8 @@ module.exports = class Botman {
     let now = new Date(new Date().toJSON().split("T")[0]);
     let then = new Date(
       new Date(newUser || users[userIndex].investOrScam.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000) {
       users.forEach(user => {
@@ -423,14 +614,18 @@ module.exports = class Botman {
       usersTable.push([count, user.username, (user.latinum).toLocaleString()]);
       count++;
     }
-    botMessage += codeBlock(table(usersTable, { align: ["l", "l", "r"] }), 'glsl');
+    botMessage += codeBlock(table(usersTable, {
+      align: ["l", "l", "r"]
+    }), 'glsl');
 
     let recordHolderTable = [
       ['#  All-time biggest wealth'],
       ['#', 'Latinum'],
       ['   ' + this.latinumScores.record.username, (this.latinumScores.record.latinum).toLocaleString()]
     ];
-    botMessage += codeBlock(table(recordHolderTable, {      align: ['l', 'r']    }),'glsl');
+    botMessage += codeBlock(table(recordHolderTable, {
+      align: ['l', 'r']
+    }), 'glsl');
     this.sendMessage(channelID, botMessage);
   }
 
@@ -502,8 +697,8 @@ module.exports = class Botman {
         "\n!play inventory/i               - Shows you your inventory\n" +
         "\nExample: " +
         "\n!play s b 1 3 - Will buy you 3x of item nr 1" +
-        "\n!play s i     - Will show you your inventory",'diff')
-        botMessage += "```glsl\n\nOffers:\n";
+        "\n!play s i     - Will show you your inventory", 'diff')
+      botMessage += "```glsl\n\nOffers:\n";
       let offersTable = [
         ['#', 'Name', 'Description']
       ];
@@ -542,8 +737,8 @@ module.exports = class Botman {
 
     let then = new Date(
       new Date(newUser || users[userIndex].sellsoul.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000 && users[userIndex].latinum == 0) {
       let dice = Math.floor(Math.random() * 1000) + 1;
@@ -731,8 +926,8 @@ module.exports = class Botman {
       if (Math.abs(now - then) >= 86400000) {
         let latinumToGive =
           currentUser == this.getTopLatinumUser().username ?
-            this.maxDailyLatinum * 2 :
-            this.maxDailyLatinum;
+          this.maxDailyLatinum * 2 :
+          this.maxDailyLatinum;
         users[userIndex].bank.latinum = latinumToGive;
         users[userIndex].bank.lastUpdate = now;
       }
@@ -801,7 +996,6 @@ module.exports = class Botman {
       latinum: -900000
     };
     for (let user of this.latinumScores.users) {
-      console.log("USER",user)
       if (bestScorer.latinum < user.latinum) {
         bestScorer = user;
       }
@@ -810,7 +1004,6 @@ module.exports = class Botman {
       this.latinumScores.record.username = bestScorer.username;
       this.latinumScores.record.latinum = bestScorer.latinum;
     }
-    console.log("BEST",bestScorer)
     return bestScorer;
   }
 
