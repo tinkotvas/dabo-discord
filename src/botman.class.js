@@ -29,31 +29,110 @@ module.exports = class Botman {
       if (err) throw err;
       this.rulesOfAcquisition = JSON.parse(data);
     });
-
     this.maxDailyLatinum = 500;
-
-
   }
 
-  dabo(channelID) {
+  dabo(user, channelID, message) {
+    let users = this.latinumScores.users;
+    let userIndex = this.findOrCreateUser(user);
+    let playPosition, chosenAmount;
+    let commands = message.split(/(!dabo|!d)\s*/i)[2];
+    let regex = /(\d+)/g;
+    if (commands === '') {
+      playPosition = 0
+      chosenAmount = "0"
+    } else {
+      playPosition = commands.split(" ")[1];
+      chosenAmount = commands.split(" ")[0];
+    }
+    if(isNaN(playPosition)){
+      playPosition = 0
+    }
+    playPosition = parseInt(playPosition)
+    let invalidPlacements = new Set([4, 5, 6, 16, 17, 18, 28, 29, 30]);
 
+    if (chosenAmount.includes(','))
+    chosenAmount = chosenAmount.replace(/,/g, '')
+
+
+  chosenAmount = parseInt(chosenAmount)
+    console.log("USER",users[userIndex])
+    if(users[userIndex].latinum < chosenAmount){
+      this.sendMessage(channelID,'Not enough Latinum','red')
+      return
+    }
+    console.log("playPosition",playPosition)
+    if(invalidPlacements.has(playPosition)){
+      this.sendMessage(channelID,playPosition + ' is a forbidden play slot','red')
+      return
+    }
+    if(playPosition > 35 ){
+      this.sendMessage(channelID,'slot ' + playPosition + ' does not exist','red')
+      return
+    }
+
+    console.log("commands:", commands)
+
+
+    const iconMap = {
+      nBH: '<:BH:569203914025598997>',
+      nDS: '<:DS:569203914071605259>',
+      nQW: '<:QW:569203914088513551>',
+      nSW: '<:SW:569203914025598977>',
+
+      RC1: '<:RC1:569195523655860224>',
+      RC2: '<:RC2:569195538390450187>',
+      RC3: '<:RC3:569195549048307712>',
+      GC1: '<:GC1:569195564894519306>',
+      GC2: '<:GC2:569195576747360269>',
+      GC3: '<:GC3:569195589380603999>',
+      BC1: '<:BC1:569195616756957229>',
+      BC2: '<:BC2:569195629017038859>',
+      BC3: '<:BC3:569195640748245073>',
+      WC1: '<:WC1:569195653247402104>',
+      WC2: '<:WC2:569195662973992992>',
+      WC3: '<:WC3:569195673799360512>',
+
+      RT1: '<:RT1:569233706129293323>',
+      RT2: '<:RT2:569233706338746388>',
+      RT3: '<:RT3:569233706254860291>',
+      GT1: '<:GT1:569233706120904704>',
+      GT2: '<:GT2:569233706238083074>',
+      GT3: '<:GT3:569233706145808395>',
+      BT1: '<:BT1:569233704141062146>',
+      BT2: '<:BT2:569233704971534366>',
+      BT3: '<:BT3:569233704682258452>',
+      WT1: '<:WT1:569233706716495882>',
+      WT2: '<:WT2:569233706649125024>',
+      WT3: '<:WT3:569233706729078785>',
+
+      RS1: '<:RS1:569233706372562944>',
+      RS2: '<:RS2:569233706275962880>',
+      RS3: '<:RS3:569233706288414721>',
+      GS1: '<:GS1:569233704426405920>',
+      GS2: '<:GS2:569233704510029854>',
+      GS3: '<:GS3:569233705781035009>',
+      BS1: '<:BS1:569233702727581706>',
+      BS2: '<:BS2:569233702593363990>',
+      BS3: '<:BS3:569233704497578014>',
+      WS1: '<:WS1:569233706569564209>',
+      WS2: '<:WS2:569233706288676865>',
+      WS3: '<:WS3:569233706187882509>'
+    }
 
     const wheel = [
-      'DS', 'S1', 'C3', 'SW', 'T1', 'T2', 'S3', 'C1', 'BH',
-      'S2', 'C3', 'S3', 'S1', 'DS', 'S2', 'T1', 'C1', 'T3',
-      'C1', 'SW', 'S3', 'C2', 'BH', 'S2', 'T3', 'DS', 'S1',
-      'T2', 'C2', 'T3', 'QW', 'C3', 'T1', 'C2', 'BH', 'T3'
+      'SW', 'T1', 'T2', 'S3', 'C1', 'BH', 'S2', 'C3', 'S3',
+      'S1', 'DS', 'S2', 'T1', 'C1', 'T3', 'C1', 'SW', 'S3',
+      'C2', 'BH', 'S2', 'T3', 'DS', 'S1', 'T2', 'C2', 'T3',
+      'QW', 'C3', 'T1', 'C2', 'BH', 'T3', 'DS', 'S1', 'C3'
     ]
-    const colors = [
-      'n', 'G', 'R', 'n', 'B', 'R', 'G', 'B', 'n',
-      'R', 'G', 'B', 'R', 'n', 'B', 'G', 'R', 'B',
-      'G', 'n', 'R', 'B', 'n', 'G', 'R', 'n', 'B',
-      'G', 'R', 'G', 'n', 'B', 'R', 'G', 'n', 'B'
+    const colorsMap = [
+      'n', 'B', 'R', 'G', 'B', 'n', 'R', 'G', 'B',
+      'R', 'n', 'B', 'G', 'R', 'B', 'G', 'n', 'R',
+      'B', 'n', 'G', 'R', 'n', 'B', 'G', 'R', 'G',
+      'n', 'B', 'R', 'G', 'n', 'B', 'n', 'G', 'R'
     ]
-    const invalidPlacements = [4, 5, 6, 16, 17, 18, 28, 29, 30]
-
-    let playPosition = 20
-    playPosition -= 1;
+    
 
     let allColors = {
       R: 0,
@@ -80,7 +159,7 @@ module.exports = class Botman {
       let tmp = 0;
       if (rolledNumber + playPosition > 35) {
         tmp = ((rolledNumber + playPosition) - 36)
-        allColors[colors[tmp]] += 1
+        allColors[colorsMap[tmp]] += 1
         return tmp
       }
       return rolledNumber
@@ -95,10 +174,12 @@ module.exports = class Botman {
     const outerWheelRoll = slotPosition(roll3)
     const allWheels = [wheel[innerWheelRoll], wheel[centerWheelRoll], wheel[outerWheelRoll]]
 
+
     allWheels.forEach(wheel => {
-      if (wheel == 'DS' |
-        wheel == 'SW' |
-        wheel == 'BH' |
+      console.log("WHEEL:",wheel)
+      if (wheel == 'DS' ||
+        wheel == 'SW' ||
+        wheel == 'BH' ||
         wheel == 'QW') {
         allShapes[wheel] += 1
       } else {
@@ -106,29 +187,139 @@ module.exports = class Botman {
         allCount[wheel.split(/(^[A-Z0-9])/)[2]] += 1
       }
     })
-    console.log(allColors, allShapes, allCount)
-    // let iW = wheel[innerWheel];
-    // let shape = iW.slice(0, 1)
-    // let number = iW.slice(1)
-    // if (!allShapes[shape])
-    //   allShapes[shape] = 0
-    // allShapes[shape] += 1
 
-    // console.log(allShapes)
+    const shapes = Math.max.apply(Math, Object.values(allShapes).map(function (o) {
+      return o
+    }))
+    const colors = Math.max.apply(Math, Object.values(allColors).map(function (o) {
+      return o
+    }))
+    const counts = Math.max.apply(Math, Object.values(allCount).map(function (o) {
+      return o
+    }))
+
+    let innerRowPrefix = wheel[innerWheelRoll]
+
+    if (
+      innerRowPrefix !== 'DS' &&
+      innerRowPrefix !== 'SW' &&
+      innerRowPrefix !== 'QW' &&
+      innerRowPrefix !== 'BH') {
+      innerRowPrefix = 'W' + innerRowPrefix
+    } else {
+      innerRowPrefix = 'n' + innerRowPrefix
+    }
+
+    let innerRowClean = iconMap[innerRowPrefix];
+    let centerRowClean = iconMap[colorsMap[centerWheelRoll] + wheel[centerWheelRoll]];
+    let outerRowClean = iconMap[colorsMap[outerWheelRoll] + wheel[outerWheelRoll]];
+
+    let botMessage = `\`\`\`md\n<DABO WHEEL>\n`;
+    botMessage += `\n${user} bets <${chosenAmount}> bars of Latinum\`\`\``
+    botMessage += `\`\`\`md\n<Slot ${playPosition}> \`\`\`\n ${innerRowClean} ${centerRowClean} ${outerRowClean}\n`;
+    // botMessage += `${innerRowPrefix} ${colorsMap[innerWheelRoll] + wheel[centerWheelRoll]} ${colorsMap[outerWheelRoll] + wheel[outerWheelRoll]}\n`
+    // botMessage += `${wheel[innerWheelRoll]} ${wheel[centerWheelRoll]} ${wheel[outerWheelRoll]}\n`
+    // botMessage += `${innerWheelRoll} ${centerWheelRoll} ${outerWheelRoll}\n`
+    /** check special conbos */
+    console.log("allshapes",allShapes)
+    console.log("allcounts",allCount)
+    botMessage += `\n\`\`\`md\n<DABO RESULT>\n\n`;
+
+    users[userIndex].latinum -= chosenAmount;
+
+    let winMultiplier = 0;
+    if (allShapes['DS'] == 3) {
+      botMessage += "#Deep Space Dabo!"
+      winMultiplier = 2000
+    } else if (allShapes['SW'] == 3) {
+      botMessage += "#Swirl Dabo!"
+      winMultiplier = 1000
+    } else if (allShapes['QW'] == 3) {
+      winMultiplier = 150
+      botMessage += "#Quarks Dabo!"
+    } else if (shapes == 3 && colors == 2 && counts == 3) {
+      botMessage += "#DABO!"
+      winMultiplier = 10
+    } else if (allShapes['QW'] == 2) {
+      botMessage += "#Quarks two of a kind!"
+      winMultiplier = 5
+    } else if (allShapes['DS'] == 2) {
+      botMessage += "#Deep Space two of a kind!"
+      winMultiplier = 4
+    } else if (counts == 3 || ((allShapes['SW'] + allShapes['BH']) == 3)) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 2
+    } else if (colors == 2 && counts == 3) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 2
+    } else if (shapes == 3 && counts == 3) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 2
+    } else if (shapes == 2 && colors == 2 && counts == 3) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 2
+    } else if (shapes == 2 && counts == 3) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 2
+    } else if (shapes == 3) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 1.5
+    } else if (shapes == 3 && colors == 2) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 1.5
+    } else if (shapes == 3 && counts == 2) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 1.5
+    } else if (shapes == 3 && colors == 2 && counts == 2) {
+      botMessage += "#Three of a kind!"
+      winMultiplier = 1.5
+    } else if (colors == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.2
+    } else if (colors == 2 && counts == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.2
+    } else if (shapes == 2 && colors == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.2
+    } else if (shapes == 2 && colors == 2 && counts == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.2
+    } else if (counts == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.15
+    } else if (shapes == 2 && counts == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.15
+    } else if (shapes == 2) {
+      botMessage += "#Two of a kind!"
+      winMultiplier = 0.1
+    } else {
+      botMessage += "The house takes your bars of Latinum"
+      this.sendMessage(channelID,
+        botMessage + `\`\`\``
+      ,'red');
+      this.saveScoresToJSON();
+      return
+    }
+    let profit = Math.floor(chosenAmount * winMultiplier);
+    botMessage += `\na return of ${profit} bars of Latinum`
+    users[userIndex].latinum += profit;
     this.sendMessage(channelID,
-      JSON.stringify(allColors) + '\n' +
-      JSON.stringify(allShapes) + '\n' +
-      JSON.stringify(allCount)
-      );
+      botMessage + `\`\`\``
+    ,'green');
+    this.saveScoresToJSON();
   }
 
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
+      console.log("MESSAGE", message)
       if (
         !/^!/.test(message) ||
         RegExp(`^${user}$`, "i").test(this.bot.username)
       )
         return;
+
       let command = message.substring(1).split(" ")[0].toLowerCase();
       if (/so+rti+e+/.test(command)) command = "sortie";
       const activeCommands = {
@@ -139,10 +330,10 @@ module.exports = class Botman {
           this.rules(channelID, message);
         },
         d: () => {
-          this.dabo(channelID, message);
+          this.dabo(user, channelID, message);
         },
         dabo: () => {
-          this.dabo(channelID, message);
+          this.dabo(user, channelID, message);
         },
         rule: () => {
           this.rules(channelID, message);
@@ -182,7 +373,7 @@ module.exports = class Botman {
         },
         god: () => {
           if (!(userID == "201004098600828928")) {
-            this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+            //this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
             return;
           }
           var exec = require("child_process").execFile;
@@ -200,7 +391,7 @@ module.exports = class Botman {
           );
         },
         default: () => {
-          this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
+          //this.sendMessage(channelID, "```diff\n- Invalid command```", "red");
         }
       };
       typeof activeCommands[command] == "function" ?
@@ -252,10 +443,10 @@ module.exports = class Botman {
           users.push({
             username: this.bot.users[user].username,
             id: this.bot.users[user].id,
-            play: 0,
+            latinum: 0,
             bank: {
               lastUpdate: new Date(new Date().toJSON().split("T")[0]),
-              play: this.maxDailyLatinum
+              latinum: this.maxDailyLatinum
             },
             sellsoul: {
               lastUpdate: new Date(0)
@@ -309,10 +500,12 @@ module.exports = class Botman {
         this.play_command_sellSoul(user, channelID);
       },
       dice: () => {
-        this.play_command_dice(user, channelID, commands);
+        // this.play_command_dice(user, channelID, commands);
+        this.sendMessage(channelID,'Use !dabo instead')
       },
       d: () => {
-        this.play_command_dice(user, channelID, commands);
+        // this.play_command_dice(user, channelID, commands);
+        this.sendMessage(channelID,'Use !dabo instead')
       },
       give: () => {
         this.play_command_giveOrTake(user, channelID, commands);
@@ -351,7 +544,7 @@ module.exports = class Botman {
     let diceMapping = [
       "<:d1:432210697318039552>",
       "<:d2:432210699427643393>",
-      "<:d3:432210699540758543>",
+      "<:d3:569194984033746984>",
       "<:d4:432210696902803467>",
       "<:d5:432210696965586954>",
       "<:d6:432210699264196625>"
@@ -685,12 +878,12 @@ module.exports = class Botman {
           }\`\`\``,
           "red"
         );
-      else
-        this.sendMessage(
-          channelID,
-          `\`\`\`diff\n- Invalid command\`\`\``,
-          "red"
-        );
+      // else
+      // this.sendMessage(
+      //   channelID,
+      //   `\`\`\`diff\n- Invalid command\`\`\``,
+      //   "red"
+      // );
     }
   }
 
@@ -769,7 +962,8 @@ module.exports = class Botman {
           `${currentUser} ${modifier} ${amount} to/from ${targetUser}`
         );
       } else {
-        botMessage = `\`\`\`diff\n- Not enough bars of Latinum, you only have ${
+        console.log("USER", users[userIndex])
+        botMessage = `\`\`\`diff\n- Not enough bars of Latinum, you have ${
           users[userIndex].bank.latinum
           }\`\`\``;
         msgColor = "red";
@@ -972,7 +1166,7 @@ module.exports = class Botman {
       " Latinum!" +
       "\n\ncommands:" +
       "\n!play list/l                 - list all users and their Latinum" +
-      "\n!play dice/d <amount> h/l/7  - feeling lucky?" +
+      "\n!play dice/d <amount> h/l/7  - feeling lucky? (disabled)" +
       "\n!play shop/s                 - Go to the shop" +
       "\n\nexamples:" +
       "\n!play g 200 Tin    - Gives 200 bars of Latinum to Tin" +
@@ -984,7 +1178,7 @@ module.exports = class Botman {
       "\n!play sellsoul/ss - sell your soul (only at 0 Latinum)" +
       "```";
     return botMessage;
-  }
+  } 
 
 };
 
