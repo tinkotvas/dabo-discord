@@ -29,7 +29,7 @@ module.exports = class Botman {
       if (err) throw err;
       this.rulesOfAcquisition = JSON.parse(data);
     });
-    this.maxDailyLatinum = 500;
+    this.maxDailyLatinum = 666999666;
   }
 
   dabo(user, channelID, message) {
@@ -37,7 +37,7 @@ module.exports = class Botman {
     let userIndex = this.findOrCreateUser(user);
     let playPosition, chosenAmount;
     let commands = message.split(/(!dabo|!d)\s*/i)[2];
-    let regex = /(\d+)/g;
+
     if (commands === '') {
       playPosition = 0
       chosenAmount = "0"
@@ -56,12 +56,10 @@ module.exports = class Botman {
 
 
   chosenAmount = parseInt(chosenAmount)
-    console.log("USER",users[userIndex])
     if(users[userIndex].latinum < chosenAmount){
       this.sendMessage(channelID,'Not enough Latinum','red')
       return
     }
-    console.log("playPosition",playPosition)
     if(invalidPlacements.has(playPosition)){
       this.sendMessage(channelID,playPosition + ' is a forbidden play slot','red')
       return
@@ -70,8 +68,6 @@ module.exports = class Botman {
       this.sendMessage(channelID,'slot ' + playPosition + ' does not exist','red')
       return
     }
-
-    console.log("commands:", commands)
 
 
     const iconMap = {
@@ -176,7 +172,6 @@ module.exports = class Botman {
 
 
     allWheels.forEach(wheel => {
-      console.log("WHEEL:",wheel)
       if (wheel == 'DS' ||
         wheel == 'SW' ||
         wheel == 'BH' ||
@@ -221,8 +216,7 @@ module.exports = class Botman {
     // botMessage += `${wheel[innerWheelRoll]} ${wheel[centerWheelRoll]} ${wheel[outerWheelRoll]}\n`
     // botMessage += `${innerWheelRoll} ${centerWheelRoll} ${outerWheelRoll}\n`
     /** check special conbos */
-    console.log("allshapes",allShapes)
-    console.log("allcounts",allCount)
+
     botMessage += `\n\`\`\`md\n<DABO RESULT>\n\n`;
 
     users[userIndex].latinum -= chosenAmount;
@@ -488,10 +482,10 @@ module.exports = class Botman {
         this.play_command_invest_or_scam(user, channelID, command);
       },
       list: () => {
-        this.play_command_list(channelID);
+        this.play_command_list(channelID, user);
       },
       l: () => {
-        this.play_command_list(channelID);
+        this.play_command_list(channelID, user);
       },
       sellsoul: () => {
         this.play_command_sellSoul(user, channelID);
@@ -605,10 +599,11 @@ module.exports = class Botman {
     }
   }
 
-  play_command_list(channelID) {
+  play_command_list(channelID, user) {
     let count = 1;
     let botMessage = '';
-
+    let userIndex = this.findOrCreateUser(user);
+    this.saveScoresToJSON();
     let usersTable = [
       ["#", "User", "Latinum"]
     ];
@@ -750,16 +745,17 @@ module.exports = class Botman {
       if (dice >= 666 && dice <= 999) {
         this.sendMessage(
           channelID,
-          `You signed a contract selling your sould for 10000000 bars of Latinum.`,
+          `You signed a contract selling your sould for 666999666 bars of Latinum.`,
           "green"
         );
-        users[userIndex].latinum += 666;
+        users[userIndex].latinum += 666999666;
       } else {
         this.sendMessage(
           channelID,
-          `You sold your Soul to the Devil and got nothing to show for it.`,
+          `You sold your Soul to the Devil and only got 666666 bars of Latinum for it.`,
           "red"
         );
+        users[userIndex].latinum += 666666;
       }
       users[userIndex].sellsoul.lastUpdate = now;
       this.saveScoresToJSON();
