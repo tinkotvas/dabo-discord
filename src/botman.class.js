@@ -35,23 +35,34 @@ module.exports = class Botman {
   dabo(user, channelID, message) {
     let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
-
     let commands = message.split(/(!dabo|!d)\s*/i)[2];
-
     let chosenAmount = commands.split(" ")[0];
-    let playPosition = commands.split(" ")[1];
+    let chosenSlot = commands.split(" ")[1];
+    let forbiddenSlots = new Set([4, 5, 6, 16, 17, 18, 28, 29, 30]);
 
-    let playPositions = playPosition.split(",")
+    if (chosenAmount == '') {
+      this.sendMessage(channelID, 'You must define an amount ex: !dabo 500', 'red')
+      return
+    }
+    if (chosenAmount == 'help') {
+      this.sendMessage(channelID, 'See all we know about Dabo here\nhttps://sto.gamepedia.com/Dabo')
+      return
+    }
+    if (chosenAmount == 'payouts') {
+      this.sendMessage(channelID, 'See full table of payouts here\nhttps://imgur.com/a/GI80CaF')
+      return
+    }
 
-    // if (isNaN(playPosition)) {
-    //   playPosition = 0
-    // }
+    if (typeof chosenSlot == 'undefined') {
+      chosenSlot = "0"
+    }
 
-    playPosition = parseInt(playPosition)
-    let invalidPlacements = new Set([4, 5, 6, 16, 17, 18, 28, 29, 30]);
+    let playPositions = chosenSlot.split(",")
 
     if (chosenAmount.includes(','))
       chosenAmount = chosenAmount.replace(/,/g, '')
+
+    chosenAmount = parseInt(chosenAmount)
 
     const iconMap = {
       nBH: '<:BH:569203914025598997>',
@@ -98,7 +109,6 @@ module.exports = class Botman {
       WS2: '<:WS2:569233706288676865>',
       WS3: '<:WS3:569233706187882509>'
     }
-
     const wheel = [
       'SW', 'T1', 'T2', 'S3', 'C1', 'BH', 'S2', 'C3', 'S3',
       'S1', 'DS', 'S2', 'T1', 'C1', 'T3', 'C1', 'SW', 'S3',
@@ -111,200 +121,219 @@ module.exports = class Botman {
       'B', 'n', 'G', 'R', 'n', 'B', 'G', 'R', 'G',
       'n', 'B', 'R', 'G', 'n', 'B', 'n', 'G', 'R'
     ];
-    let allColors = {
-      R: 0,
-      G: 0,
-      B: 0,
-      n: 0
-    };
-    let allShapes = {
-      S: 0,
-      C: 0,
-      T: 0,
-      DS: 0,
-      SW: 0,
-      BH: 0,
-      QW: 0
-    };
-    let allCount = {
-      1: 0,
-      2: 0,
-      3: 0
-    };
 
-    chosenAmount = parseInt(chosenAmount)
-    console.log("playPosition",playPosition)
-    console.log("chosenAmount",chosenAmount)
-    console.log("commands",commands)
-    if (users[userIndex].latinum < chosenAmount) {
+    if (playPositions.length > 3) {
+      this.sendMessage(channelID, 'You can only play on 3 slots', 'red')
+      return
+    }
+
+    if ((users[userIndex].latinum * playPositions.length) < chosenAmount) {
       this.sendMessage(channelID, 'Not enough Latinum', 'red')
       return
     }
-    if (invalidPlacements.has(playPosition)) {
-      this.sendMessage(channelID, playPosition + ' is a forbidden play slot', 'red')
+
+    let usedForbiddenSlot = false;
+    let forbiddenFound = ""
+    playPositions.forEach(choice => {
+      choice = parseInt(choice)
+      console.log("choice", choice)
+      if (forbiddenSlots.has(choice)) {
+        console.log("is fobidden")
+        forbiddenFound += choice;
+        usedForbiddenSlot = true;
+      }
+    })
+
+    console.log("forbiddenFound", forbiddenFound)
+    if (usedForbiddenSlot) {
+      this.sendMessage(channelID,
+        forbiddenFound.split('').length > 1 ?
+        forbiddenFound.split('').join(',') + ' are forbidden play slots' :
+        forbiddenFound + ' is a forbidden play slot',
+        'red');
       return
     }
+    // if (invalidPlacements.has(playPosition)) {
+    //   this.sendMessage(channelID, playPosition + ' is a forbidden play slot', 'red')
+    //   return
+    // }
     if (chosenAmount <= 0) {
       this.sendMessage(channelID, 'Need to bet more than ' + chosenAmount + ' bars of Latinum.', 'red')
       return
     }
-    if (playPosition > 35) {
-      this.sendMessage(channelID, 'slot ' + playPosition + ' does not exist', 'red')
-      return
-    }
+    // if (playPosition > 35) {
+    //   this.sendMessage(channelID, 'slot ' + playPosition + ' does not exist', 'red')
+    //   return
+    // }
 
-
-
-    const slotPosition = (rolledNumber) => {
-      let tmp = 0;
-      if (rolledNumber + playPosition > 35) {
-        tmp = ((rolledNumber + playPosition) - 36)
-        allColors[colorsMap[tmp]] += 1
-        return tmp
-      }
-      return rolledNumber
-    }
+    let botMessage = `\`\`\`md\n<DABO WHEEL>\n`;
+    botMessage += `${user} bets <${chosenAmount * playPositions.length}> bars of Latinum\`\`\`\n`
 
     const roll1 = Math.floor(Math.random() * 36)
     const roll2 = Math.floor(Math.random() * 36)
     const roll3 = Math.floor(Math.random() * 36)
+    let winMultiplier = 0;
 
-    const innerWheelRoll = slotPosition(roll1)
-    const centerWheelRoll = slotPosition(roll2)
-    const outerWheelRoll = slotPosition(roll3)
-    const allWheels = [wheel[innerWheelRoll], wheel[centerWheelRoll], wheel[outerWheelRoll]]
+    playPositions.forEach(playPosition => {
+      playPosition = parseInt(playPosition)
+      let allColors = {
+        R: 0,
+        G: 0,
+        B: 0,
+        n: 0
+      };
+      let allShapes = {
+        S: 0,
+        C: 0,
+        T: 0,
+        DS: 0,
+        SW: 0,
+        QW: 0
+      };
+      let allCount = {
+        1: 0,
+        2: 0,
+        3: 0
+      };
 
-
-    allWheels.forEach(wheel => {
-      if (wheel == 'DS' ||
-        wheel == 'SW' ||
-        wheel == 'BH' ||
-        wheel == 'QW') {
-        allShapes[wheel] += 1
-      } else {
-        allShapes[wheel.split(/(^[A-Z0-9])/)[1]] += 1
-        allCount[wheel.split(/(^[A-Z0-9])/)[2]] += 1
+      const slotPosition = (rolledNumber) => {
+        let tmp = 0;
+        if (rolledNumber + playPosition > 35) {
+          tmp = ((rolledNumber + playPosition) - 36)
+          allColors[colorsMap[tmp]] += 1
+          return tmp
+        }
+        return rolledNumber + playPosition
       }
+
+      const innerWheelRoll = slotPosition(roll1)
+      const centerWheelRoll = slotPosition(roll2)
+      const outerWheelRoll = slotPosition(roll3)
+      const allWheels = [wheel[innerWheelRoll], wheel[centerWheelRoll], wheel[outerWheelRoll]]
+      let blackHoles = 0
+
+      allWheels.forEach(wheel => {
+        if (wheel == 'DS' ||
+          wheel == 'SW' ||
+          wheel == 'QW') {
+          allShapes[wheel] += 1
+        } else if (wheel == 'BH') {
+          blackHoles += 1
+        } else {
+          allShapes[wheel.split(/(^[A-Z0-9])/)[1]] += 1
+          allCount[wheel.split(/(^[A-Z0-9])/)[2]] += 1
+        }
+      })
+
+      let shapes = Math.max.apply(Math, Object.values(allShapes).map(function (o) {
+        return o
+      }))
+      const colors = Math.max.apply(Math, Object.values(allColors).map(function (o) {
+        return o
+      }))
+      const counts = Math.max.apply(Math, Object.values(allCount).map(function (o) {
+        return o
+      }))
+
+      let innerRowPrefix = wheel[innerWheelRoll]
+
+      if (
+        innerRowPrefix !== 'DS' &&
+        innerRowPrefix !== 'SW' &&
+        innerRowPrefix !== 'QW' &&
+        innerRowPrefix !== 'BH') {
+        innerRowPrefix = 'W' + innerRowPrefix
+      } else {
+        innerRowPrefix = 'n' + innerRowPrefix
+      }
+
+      let innerRowClean = iconMap[innerRowPrefix];
+      let centerRowClean = iconMap[colorsMap[centerWheelRoll] + wheel[centerWheelRoll]];
+      let outerRowClean = iconMap[colorsMap[outerWheelRoll] + wheel[outerWheelRoll]];
+
+      botMessage += `${innerRowClean} ${centerRowClean} ${outerRowClean}\n\`\`\`md\n<slot ${playPosition}>\`\`\``;
+      botMessage += `\`\`\`md\n`;
+
+      users[userIndex].latinum -= chosenAmount;
+
+      if (allShapes['DS'] == 3) {
+        botMessage += "<! Deep Space Dabo!!>"
+        winMultiplier += 2000
+      } else if (allShapes['SW'] == 3) {
+        botMessage += "<! Swirl Dabo!!>"
+        winMultiplier += 1000
+      } else if (allShapes['QW'] == 3) {
+        winMultiplier += 150
+        botMessage += "<! Quarks Dabo!!>"
+      } else if (shapes == 3 && colors == 2 && counts == 3) {
+        botMessage += "<! DABO!!"
+        winMultiplier += 10
+      } else if (allShapes['QW'] == 2) {
+        botMessage += "<! Quarks two of a kind!>"
+        winMultiplier += 5
+      } else if (allShapes['DS'] == 2) {
+        botMessage += "<! Deep Space two of a kind!>"
+        winMultiplier += 4
+      } else if (counts == 3 || ((allShapes['SW'] + blackHoles) == 3)) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 2
+      } else if (colors == 2 && counts == 3) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 2
+      } else if (shapes == 3 && counts == 3) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 2
+      } else if (shapes == 2 && colors == 2 && counts == 3) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 2
+      } else if (shapes == 2 && counts == 3) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 2
+      } else if (shapes == 3) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 1.5
+      } else if (shapes == 3 && colors == 2) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 1.5
+      } else if (shapes == 3 && counts == 2) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 1.5
+      } else if (shapes == 3 && colors == 2 && counts == 2) {
+        botMessage += "<! Three of a kind!>"
+        winMultiplier += 1.5
+      } else if (colors == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.2
+      } else if (colors == 2 && counts == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.2
+      } else if (shapes == 2 && colors == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.2
+      } else if (shapes == 2 && colors == 2 && counts == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.2
+      } else if (counts == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.15
+      } else if (shapes == 2 && counts == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.15
+      } else if (shapes == 2) {
+        botMessage += "<! Two of a kind!>"
+        winMultiplier += 0.1
+      } else {
+        botMessage += "<Quark Wins>"
+      }
+      botMessage += '```\n'
     })
 
-    const shapes = Math.max.apply(Math, Object.values(allShapes).map(function (o) {
-      return o
-    }))
-    const colors = Math.max.apply(Math, Object.values(allColors).map(function (o) {
-      return o
-    }))
-    const counts = Math.max.apply(Math, Object.values(allCount).map(function (o) {
-      return o
-    }))
-
-    let innerRowPrefix = wheel[innerWheelRoll]
-
-    if (
-      innerRowPrefix !== 'DS' &&
-      innerRowPrefix !== 'SW' &&
-      innerRowPrefix !== 'QW' &&
-      innerRowPrefix !== 'BH') {
-      innerRowPrefix = 'W' + innerRowPrefix
-    } else {
-      innerRowPrefix = 'n' + innerRowPrefix
-    }
-
-    let innerRowClean = iconMap[innerRowPrefix];
-    let centerRowClean = iconMap[colorsMap[centerWheelRoll] + wheel[centerWheelRoll]];
-    let outerRowClean = iconMap[colorsMap[outerWheelRoll] + wheel[outerWheelRoll]];
-
-    let botMessage = `\`\`\`md\n<DABO WHEEL>\n`;
-    botMessage += `${user} bets <${chosenAmount}> bars of Latinum\`\`\`\n`
-    botMessage += `${innerRowClean} ${centerRowClean} ${outerRowClean}\n\`\`\`md\n<slot ${playPosition}>\`\`\``;
-    // botMessage += `${innerRowPrefix} ${colorsMap[innerWheelRoll] + wheel[centerWheelRoll]} ${colorsMap[outerWheelRoll] + wheel[outerWheelRoll]}\n`
-    // botMessage += `${wheel[innerWheelRoll]} ${wheel[centerWheelRoll]} ${wheel[outerWheelRoll]}\n`
-    // botMessage += `${innerWheelRoll} ${centerWheelRoll} ${outerWheelRoll}\n`
-    /** check special conbos */
-
-    botMessage += `\`\`\`md\n< RESULT >\n`;
-
-    users[userIndex].latinum -= chosenAmount;
-
-    let winMultiplier = 0;
-    if (allShapes['DS'] == 3) {
-      botMessage += "<! Deep Space Dabo!!>"
-      winMultiplier = 2000
-    } else if (allShapes['SW'] == 3) {
-      botMessage += "<! Swirl Dabo!!>"
-      winMultiplier = 1000
-    } else if (allShapes['QW'] == 3) {
-      winMultiplier = 150
-      botMessage += "<! Quarks Dabo!!>"
-    } else if (shapes == 3 && colors == 2 && counts == 3) {
-      botMessage += "<! DABO!!"
-      winMultiplier = 10
-    } else if (allShapes['QW'] == 2) {
-      botMessage += "<! Quarks two of a kind!>"
-      winMultiplier = 5
-    } else if (allShapes['DS'] == 2) {
-      botMessage += "<! Deep Space two of a kind!>"
-      winMultiplier = 4
-    } else if (counts == 3 || ((allShapes['SW'] + allShapes['BH']) == 3)) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 2
-    } else if (colors == 2 && counts == 3) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 2
-    } else if (shapes == 3 && counts == 3) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 2
-    } else if (shapes == 2 && colors == 2 && counts == 3) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 2
-    } else if (shapes == 2 && counts == 3) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 2
-    } else if (shapes == 3) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 1.5
-    } else if (shapes == 3 && colors == 2) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 1.5
-    } else if (shapes == 3 && counts == 2) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 1.5
-    } else if (shapes == 3 && colors == 2 && counts == 2) {
-      botMessage += "<! Three of a kind!>"
-      winMultiplier = 1.5
-    } else if (colors == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.2
-    } else if (colors == 2 && counts == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.2
-    } else if (shapes == 2 && colors == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.2
-    } else if (shapes == 2 && colors == 2 && counts == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.2
-    } else if (counts == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.15
-    } else if (shapes == 2 && counts == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.15
-    } else if (shapes == 2) {
-      botMessage += "<! Two of a kind!>"
-      winMultiplier = 0.1
-    } else {
-      botMessage += "The house takes your bars of Latinum"
-      this.sendMessage(channelID,
-        botMessage + `\`\`\``, 'red');
-      this.saveScoresToJSON();
-      return
-    }
-    let profit = Math.floor(chosenAmount * winMultiplier);
-    botMessage += `\nA ${winMultiplier*100}% return of ${profit} bars of Latinum`
+    const profit = Math.floor((chosenAmount * playPositions.length) * winMultiplier);
+    botMessage += `\`\`\`md\nA ${Math.floor(winMultiplier * 100)}% return of ${profit} bars of Latinum`
     users[userIndex].latinum += profit;
+    this.saveScoresToJSON();
     this.sendMessage(channelID,
       botMessage + `\`\`\``, 'purple');
-    this.saveScoresToJSON();
   }
 
   messageHandler() {
@@ -607,26 +636,32 @@ module.exports = class Botman {
     let userIndex = this.findOrCreateUser(user);
     this.saveScoresToJSON();
     let usersTable = [
-      ["#", "User", "Latinum"]
+      ['', '', '.'],
+      ['#', 'CITIZENS WEALTH', '#'],
+      ['', '', '']
     ];
     for (let user of this.latinumScores.users) {
       if (user.latinum == 0) {
         continue;
       }
-      usersTable.push([count, user.username, (user.latinum).toLocaleString()]);
+      usersTable.push([user.username, '', (user.latinum).toLocaleString()]);
       count++;
     }
-    botMessage += codeBlock(table(usersTable, {
-      align: ["l", "l", "r"]
-    }), 'glsl');
 
     let recordHolderTable = [
-      ['#  All-time Biggest Lobes'],
-      ['#', 'Latinum'],
-      ['   ' + this.latinumScores.record.username, (this.latinumScores.record.latinum).toLocaleString()]
+      ['', '', ''],
+      ['#', '----------------------------', '#'],
+      ['#', 'LARGEST LOBES EVER SEEN', '#'],
+      ['#', '----------------------------', '#'],
+      ['', '', ''],
+      [' ', this.latinumScores.record.username + ' - ' + (this.latinumScores.record.latinum).toLocaleString(), ''],
+      ['', '', '.']
     ];
-    botMessage += codeBlock(table(recordHolderTable, {
-      align: ['l', 'r']
+
+    let bothTables = [...usersTable, ...recordHolderTable]
+
+    botMessage += codeBlock(table(bothTables, {
+      align: ["l", "c", "r"]
     }), 'glsl');
     this.sendMessage(channelID, botMessage);
   }
