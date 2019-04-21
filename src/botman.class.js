@@ -35,40 +35,23 @@ module.exports = class Botman {
   dabo(user, channelID, message) {
     let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
-    let playPosition, chosenAmount;
+
     let commands = message.split(/(!dabo|!d)\s*/i)[2];
 
-    if (commands === '') {
-      playPosition = 0
-      chosenAmount = "0"
-    } else {
-      playPosition = commands.split(" ")[1];
-      chosenAmount = commands.split(" ")[0];
-    }
-    if(isNaN(playPosition)){
-      playPosition = 0
-    }
+    let chosenAmount = commands.split(" ")[0];
+    let playPosition = commands.split(" ")[1];
+
+    let playPositions = playPosition.split(",")
+
+    // if (isNaN(playPosition)) {
+    //   playPosition = 0
+    // }
+
     playPosition = parseInt(playPosition)
     let invalidPlacements = new Set([4, 5, 6, 16, 17, 18, 28, 29, 30]);
 
     if (chosenAmount.includes(','))
-    chosenAmount = chosenAmount.replace(/,/g, '')
-
-
-  chosenAmount = parseInt(chosenAmount)
-    if(users[userIndex].latinum < chosenAmount){
-      this.sendMessage(channelID,'Not enough Latinum','red')
-      return
-    }
-    if(invalidPlacements.has(playPosition)){
-      this.sendMessage(channelID,playPosition + ' is a forbidden play slot','red')
-      return
-    }
-    if(playPosition > 35 ){
-      this.sendMessage(channelID,'slot ' + playPosition + ' does not exist','red')
-      return
-    }
-
+      chosenAmount = chosenAmount.replace(/,/g, '')
 
     const iconMap = {
       nBH: '<:BH:569203914025598997>',
@@ -127,9 +110,7 @@ module.exports = class Botman {
       'R', 'n', 'B', 'G', 'R', 'B', 'G', 'n', 'R',
       'B', 'n', 'G', 'R', 'n', 'B', 'G', 'R', 'G',
       'n', 'B', 'R', 'G', 'n', 'B', 'n', 'G', 'R'
-    ]
-    
-
+    ];
     let allColors = {
       R: 0,
       G: 0,
@@ -150,6 +131,29 @@ module.exports = class Botman {
       2: 0,
       3: 0
     };
+
+    chosenAmount = parseInt(chosenAmount)
+    console.log("playPosition",playPosition)
+    console.log("chosenAmount",chosenAmount)
+    console.log("commands",commands)
+    if (users[userIndex].latinum < chosenAmount) {
+      this.sendMessage(channelID, 'Not enough Latinum', 'red')
+      return
+    }
+    if (invalidPlacements.has(playPosition)) {
+      this.sendMessage(channelID, playPosition + ' is a forbidden play slot', 'red')
+      return
+    }
+    if (chosenAmount <= 0) {
+      this.sendMessage(channelID, 'Need to bet more than ' + chosenAmount + ' bars of Latinum.', 'red')
+      return
+    }
+    if (playPosition > 35) {
+      this.sendMessage(channelID, 'slot ' + playPosition + ' does not exist', 'red')
+      return
+    }
+
+
 
     const slotPosition = (rolledNumber) => {
       let tmp = 0;
@@ -210,104 +214,101 @@ module.exports = class Botman {
     let outerRowClean = iconMap[colorsMap[outerWheelRoll] + wheel[outerWheelRoll]];
 
     let botMessage = `\`\`\`md\n<DABO WHEEL>\n`;
-    botMessage += `\n${user} bets <${chosenAmount}> bars of Latinum\`\`\``
-    botMessage += `\`\`\`md\n<Slot ${playPosition}> \`\`\`\n ${innerRowClean} ${centerRowClean} ${outerRowClean}\n`;
+    botMessage += `${user} bets <${chosenAmount}> bars of Latinum\`\`\`\n`
+    botMessage += `${innerRowClean} ${centerRowClean} ${outerRowClean}\n\`\`\`md\n<slot ${playPosition}>\`\`\``;
     // botMessage += `${innerRowPrefix} ${colorsMap[innerWheelRoll] + wheel[centerWheelRoll]} ${colorsMap[outerWheelRoll] + wheel[outerWheelRoll]}\n`
     // botMessage += `${wheel[innerWheelRoll]} ${wheel[centerWheelRoll]} ${wheel[outerWheelRoll]}\n`
     // botMessage += `${innerWheelRoll} ${centerWheelRoll} ${outerWheelRoll}\n`
     /** check special conbos */
 
-    botMessage += `\n\`\`\`md\n<DABO RESULT>\n\n`;
+    botMessage += `\`\`\`md\n< RESULT >\n`;
 
     users[userIndex].latinum -= chosenAmount;
 
     let winMultiplier = 0;
     if (allShapes['DS'] == 3) {
-      botMessage += "#Deep Space Dabo!"
+      botMessage += "<! Deep Space Dabo!!>"
       winMultiplier = 2000
     } else if (allShapes['SW'] == 3) {
-      botMessage += "#Swirl Dabo!"
+      botMessage += "<! Swirl Dabo!!>"
       winMultiplier = 1000
     } else if (allShapes['QW'] == 3) {
       winMultiplier = 150
-      botMessage += "#Quarks Dabo!"
+      botMessage += "<! Quarks Dabo!!>"
     } else if (shapes == 3 && colors == 2 && counts == 3) {
-      botMessage += "#DABO!"
+      botMessage += "<! DABO!!"
       winMultiplier = 10
     } else if (allShapes['QW'] == 2) {
-      botMessage += "#Quarks two of a kind!"
+      botMessage += "<! Quarks two of a kind!>"
       winMultiplier = 5
     } else if (allShapes['DS'] == 2) {
-      botMessage += "#Deep Space two of a kind!"
+      botMessage += "<! Deep Space two of a kind!>"
       winMultiplier = 4
     } else if (counts == 3 || ((allShapes['SW'] + allShapes['BH']) == 3)) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 2
     } else if (colors == 2 && counts == 3) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 2
     } else if (shapes == 3 && counts == 3) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 2
     } else if (shapes == 2 && colors == 2 && counts == 3) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 2
     } else if (shapes == 2 && counts == 3) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 2
     } else if (shapes == 3) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 1.5
     } else if (shapes == 3 && colors == 2) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 1.5
     } else if (shapes == 3 && counts == 2) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 1.5
     } else if (shapes == 3 && colors == 2 && counts == 2) {
-      botMessage += "#Three of a kind!"
+      botMessage += "<! Three of a kind!>"
       winMultiplier = 1.5
     } else if (colors == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.2
     } else if (colors == 2 && counts == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.2
     } else if (shapes == 2 && colors == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.2
     } else if (shapes == 2 && colors == 2 && counts == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.2
     } else if (counts == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.15
     } else if (shapes == 2 && counts == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.15
     } else if (shapes == 2) {
-      botMessage += "#Two of a kind!"
+      botMessage += "<! Two of a kind!>"
       winMultiplier = 0.1
     } else {
       botMessage += "The house takes your bars of Latinum"
       this.sendMessage(channelID,
-        botMessage + `\`\`\``
-      ,'red');
+        botMessage + `\`\`\``, 'red');
       this.saveScoresToJSON();
       return
     }
     let profit = Math.floor(chosenAmount * winMultiplier);
-    botMessage += `\na return of ${profit} bars of Latinum`
+    botMessage += `\nA ${winMultiplier*100}% return of ${profit} bars of Latinum`
     users[userIndex].latinum += profit;
     this.sendMessage(channelID,
-      botMessage + `\`\`\``
-    ,'green');
+      botMessage + `\`\`\``, 'purple');
     this.saveScoresToJSON();
   }
 
   messageHandler() {
     this.bot.on("message", (user, userID, channelID, message, evt) => {
-      console.log("MESSAGE", message)
       if (
         !/^!/.test(message) ||
         RegExp(`^${user}$`, "i").test(this.bot.username)
@@ -396,6 +397,7 @@ module.exports = class Botman {
 
   sendMessage(channelID, botMessage, color = "pink") {
     let colors = {
+      purple: 9055202,
       red: 16711680,
       green: 65280,
       blue: 255,
@@ -495,11 +497,11 @@ module.exports = class Botman {
       },
       dice: () => {
         // this.play_command_dice(user, channelID, commands);
-        this.sendMessage(channelID,'Use !dabo instead')
+        this.sendMessage(channelID, 'Use !dabo instead')
       },
       d: () => {
         // this.play_command_dice(user, channelID, commands);
-        this.sendMessage(channelID,'Use !dabo instead')
+        this.sendMessage(channelID, 'Use !dabo instead')
       },
       give: () => {
         this.play_command_giveOrTake(user, channelID, commands);
@@ -560,8 +562,8 @@ module.exports = class Botman {
     let now = new Date(new Date().toJSON().split("T")[0]);
     let then = new Date(
       new Date(newUser || users[userIndex].investOrScam.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000) {
       users.forEach(user => {
@@ -737,8 +739,8 @@ module.exports = class Botman {
 
     let then = new Date(
       new Date(newUser || users[userIndex].sellsoul.lastUpdate)
-        .toJSON()
-        .split("T")[0]
+      .toJSON()
+      .split("T")[0]
     );
     if (Math.abs(now - then) >= 86400000 && users[userIndex].latinum == 0) {
       let dice = Math.floor(Math.random() * 1000) + 1;
@@ -927,8 +929,8 @@ module.exports = class Botman {
       if (Math.abs(now - then) >= 86400000) {
         let latinumToGive =
           currentUser == this.getTopLatinumUser().username ?
-            this.maxDailyLatinum * 2 :
-            this.maxDailyLatinum;
+          this.maxDailyLatinum * 2 :
+          this.maxDailyLatinum;
         users[userIndex].bank.latinum = latinumToGive;
         users[userIndex].bank.lastUpdate = now;
       }
@@ -1099,8 +1101,8 @@ module.exports = class Botman {
         botMessage += (table([
           [variant.missionType, variant.node]
         ], {
-            align: ["l", "r"]
-          }) + "\n");
+          align: ["l", "r"]
+        }) + "\n");
         botMessage += (variant.modifier + "\n");
         botMessage += (variant.modifierDescription + "\n");
         botMessage += "\n";
@@ -1174,7 +1176,7 @@ module.exports = class Botman {
       "\n!play sellsoul/ss - sell your soul (only at 0 Latinum)" +
       "```";
     return botMessage;
-  } 
+  }
 
 };
 
