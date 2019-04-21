@@ -33,37 +33,6 @@ module.exports = class Botman {
   }
 
   dabo(user, channelID, message) {
-    let users = this.latinumScores.users;
-    let userIndex = this.findOrCreateUser(user);
-    let commands = message.split(/(!dabo|!d)\s*/i)[2];
-    let chosenAmount = commands.split(" ")[0];
-    let chosenSlot = commands.split(" ")[1];
-    let forbiddenSlots = new Set([4, 5, 6, 16, 17, 18, 28, 29, 30]);
-
-    if (chosenAmount == '') {
-      this.sendMessage(channelID, 'You must define an amount ex: !dabo 500', 'red')
-      return
-    }
-    if (chosenAmount == 'help') {
-      this.sendMessage(channelID, 'See all we know about Dabo here\nhttps://sto.gamepedia.com/Dabo')
-      return
-    }
-    if (chosenAmount == 'payouts') {
-      this.sendMessage(channelID, 'See full table of payouts here\nhttps://imgur.com/a/GI80CaF')
-      return
-    }
-
-    if (typeof chosenSlot == 'undefined') {
-      chosenSlot = "0"
-    }
-
-    let playPositions = chosenSlot.split(",")
-
-    if (chosenAmount.includes(','))
-      chosenAmount = chosenAmount.replace(/,/g, '')
-
-    chosenAmount = parseInt(chosenAmount)
-
     const iconMap = {
       nBH: '<:BH:569203914025598997>',
       nDS: '<:DS:569203914071605259>',
@@ -121,6 +90,42 @@ module.exports = class Botman {
       'B', 'n', 'G', 'R', 'n', 'B', 'G', 'R', 'G',
       'n', 'B', 'R', 'G', 'n', 'B', 'n', 'G', 'R'
     ];
+    const minimumPlayAmount = 10;
+    let users = this.latinumScores.users;
+    let userIndex = this.findOrCreateUser(user);
+    let commands = message.split(/(!dabo|!d)\s*/i)[2];
+    let chosenAmount = commands.split(" ")[0];
+    let chosenSlot = commands.split(" ")[1];
+    let forbiddenSlots = new Set([5, 6, 7, 17, 18, 19, 29, 30, 31]);
+
+    if (chosenAmount == '') {
+      this.sendMessage(channelID, 'You must define an amount ex: !dabo 500', 'red')
+      return
+    }
+    if (chosenAmount == 'help') {
+      this.sendMessage(channelID, 'See all we know about Dabo here\nhttps://sto.gamepedia.com/Dabo')
+      return
+    }
+    if (chosenAmount == 'payouts') {
+      this.sendMessage(channelID, 'See full table of payouts here\nhttps://imgur.com/a/GI80CaF')
+      return
+    }
+
+    if (typeof chosenSlot == 'undefined') {
+      chosenSlot = "0"
+    }
+
+    let playPositions = chosenSlot.split(",")
+
+    if (chosenAmount.includes(','))
+      chosenAmount = chosenAmount.replace(/,/g, '')
+
+    chosenAmount = parseInt(chosenAmount)
+
+    if(chosenAmount < minimumPlayAmount){
+      this.sendMessage(channelID, 'Minimum play amount is 300', 'red')
+      return
+    }
 
     if (playPositions.length > 3) {
       this.sendMessage(channelID, 'You can only play on 3 slots', 'red')
@@ -133,41 +138,43 @@ module.exports = class Botman {
     }
 
     let usedForbiddenSlot = false;
+    let usedNotExistingSlot = false;
     let forbiddenFound = ""
     playPositions.forEach(choice => {
       choice = parseInt(choice)
-      console.log("choice", choice)
+
       if (forbiddenSlots.has(choice)) {
-        console.log("is fobidden")
         forbiddenFound += choice;
         usedForbiddenSlot = true;
       }
+
+      if(choice > 35 || choice < 0){
+        usedNotExistingSlot = true;
+      }
+      
     })
 
-    console.log("forbiddenFound", forbiddenFound)
     if (usedForbiddenSlot) {
       this.sendMessage(channelID,
         forbiddenFound.split('').length > 1 ?
-        forbiddenFound.split('').join(',') + ' are forbidden play slots' :
-        forbiddenFound + ' is a forbidden play slot',
+        forbiddenFound.split('').join(',') + ' are forbidden play slots\nForbidden slots are 5-7, 17-19, 29-31' :
+        forbiddenFound + ' is a forbidden play slot\nForbidden slots are 5-7, 17-19, 29-31',
         'red');
       return
     }
-    // if (invalidPlacements.has(playPosition)) {
-    //   this.sendMessage(channelID, playPosition + ' is a forbidden play slot', 'red')
-    //   return
-    // }
+
     if (chosenAmount <= 0) {
       this.sendMessage(channelID, 'Need to bet more than ' + chosenAmount + ' bars of Latinum.', 'red')
       return
     }
-    // if (playPosition > 35) {
-    //   this.sendMessage(channelID, 'slot ' + playPosition + ' does not exist', 'red')
-    //   return
-    // }
 
-    let botMessage = `\`\`\`md\n<DABO WHEEL>\n`;
-    botMessage += `${user} bets <${chosenAmount * playPositions.length}> bars of Latinum\`\`\`\n`
+    if (usedNotExistingSlot) {
+      this.sendMessage(channelID, 'Invalid play slot\nAllowed play slots range from 0-35\nForbidden slots are 5-7, 17-19, 29-31', 'red')
+      return
+    }
+
+    let botMessage = `\`\`\`md\n<DABO WHEEL> for ${user} <${chosenAmount * playPositions.length}>\n`;
+    botMessage += `<${chosenAmount}> bars each on ${playPositions}\`\`\`\n`
 
     const roll1 = Math.floor(Math.random() * 36)
     const roll2 = Math.floor(Math.random() * 36)
@@ -219,21 +226,24 @@ module.exports = class Botman {
           allShapes[wheel] += 1
         } else if (wheel == 'BH') {
           blackHoles += 1
-        } else {
+        } else  {
           allShapes[wheel.split(/(^[A-Z0-9])/)[1]] += 1
           allCount[wheel.split(/(^[A-Z0-9])/)[2]] += 1
         }
       })
 
-      let shapes = Math.max.apply(Math, Object.values(allShapes).map(function (o) {
-        return o
-      }))
-      const colors = Math.max.apply(Math, Object.values(allColors).map(function (o) {
-        return o
-      }))
-      const counts = Math.max.apply(Math, Object.values(allCount).map(function (o) {
-        return o
-      }))
+      const getMax = (obj) => {
+        return Math.max.apply(Math, Object.values(obj).map(function (o) {
+          return o
+        }))
+      }
+
+      const shapes = getMax(allShapes);
+      delete allColors['n'];
+      const colors = getMax(allColors);
+      const counts = getMax(allCount);
+
+      console.log(allShapes,allColors,allCount)
 
       let innerRowPrefix = wheel[innerWheelRoll]
 
@@ -251,85 +261,85 @@ module.exports = class Botman {
       let centerRowClean = iconMap[colorsMap[centerWheelRoll] + wheel[centerWheelRoll]];
       let outerRowClean = iconMap[colorsMap[outerWheelRoll] + wheel[outerWheelRoll]];
 
-      botMessage += `${innerRowClean} ${centerRowClean} ${outerRowClean}\n\`\`\`md\n<slot ${playPosition}>\`\`\``;
-      botMessage += `\`\`\`md\n`;
+      botMessage += `${innerRowClean} ${centerRowClean} ${outerRowClean}\n`;
+      botMessage += `\`\`\`md\n<${playPosition}`;
 
       users[userIndex].latinum -= chosenAmount;
 
       if (allShapes['DS'] == 3) {
-        botMessage += "<! Deep Space Dabo!!>"
+        botMessage += " Deep Space Dabo!!>"
         winMultiplier += 2000
       } else if (allShapes['SW'] == 3) {
-        botMessage += "<! Swirl Dabo!!>"
+        botMessage += " Swirl Dabo!!>"
         winMultiplier += 1000
       } else if (allShapes['QW'] == 3) {
         winMultiplier += 150
-        botMessage += "<! Quarks Dabo!!>"
+        botMessage += " Quarks Dabo!!>"
       } else if (shapes == 3 && colors == 2 && counts == 3) {
-        botMessage += "<! DABO!!"
+        botMessage += " DABO!!"
         winMultiplier += 10
       } else if (allShapes['QW'] == 2) {
-        botMessage += "<! Quarks two of a kind!>"
+        botMessage += " Quarks two of a kind!>"
         winMultiplier += 5
       } else if (allShapes['DS'] == 2) {
-        botMessage += "<! Deep Space two of a kind!>"
+        botMessage += " Deep Space two of a kind!>"
         winMultiplier += 4
       } else if (counts == 3 || ((allShapes['SW'] + blackHoles) == 3)) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 2
       } else if (colors == 2 && counts == 3) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 2
       } else if (shapes == 3 && counts == 3) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 2
       } else if (shapes == 2 && colors == 2 && counts == 3) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 2
       } else if (shapes == 2 && counts == 3) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 2
       } else if (shapes == 3) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 1.5
       } else if (shapes == 3 && colors == 2) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 1.5
       } else if (shapes == 3 && counts == 2) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 1.5
       } else if (shapes == 3 && colors == 2 && counts == 2) {
-        botMessage += "<! Three of a kind!>"
+        botMessage += " Three of a kind!>"
         winMultiplier += 1.5
       } else if (colors == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.2
       } else if (colors == 2 && counts == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.2
       } else if (shapes == 2 && colors == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.2
       } else if (shapes == 2 && colors == 2 && counts == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.2
       } else if (counts == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.15
       } else if (shapes == 2 && counts == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.15
       } else if (shapes == 2) {
-        botMessage += "<! Two of a kind!>"
+        botMessage += " Two of a kind!>"
         winMultiplier += 0.1
       } else {
-        botMessage += "<Quark Wins>"
+        botMessage += " Quark Wins>"
       }
       botMessage += '```\n'
     })
 
     const profit = Math.floor((chosenAmount * playPositions.length) * winMultiplier);
-    botMessage += `\`\`\`md\nA ${Math.floor(winMultiplier * 100)}% return of ${profit} bars of Latinum`
+    botMessage += `\`\`\`md\n<${Math.floor(winMultiplier * 100)}%> return of <${profit}> ${profit <= 1 ? profit == 1 ? 'bar of Latinum' : '' : 'bars of Latinum'}`
     users[userIndex].latinum += profit;
     this.saveScoresToJSON();
     this.sendMessage(channelID,
