@@ -29,10 +29,12 @@ module.exports = class Botman {
       if (err) throw err;
       this.rulesOfAcquisition = JSON.parse(data);
     });
-    this.maxDailyLatinum = 666999666;
+    this.maxDailyLatinum = 500000;
   }
 
   dabo(user, channelID, message) {
+
+
     const iconMap = {
       nBH: '<:BH:569203914025598997>',
       nDS: '<:DS:569203914071605259>',
@@ -90,7 +92,7 @@ module.exports = class Botman {
       'B', 'n', 'G', 'R', 'n', 'B', 'G', 'R', 'G',
       'n', 'B', 'R', 'G', 'n', 'B', 'n', 'G', 'R'
     ];
-    const minimumPlayAmount = 10;
+    const minimumPlayAmount = 300;
     let users = this.latinumScores.users;
     let userIndex = this.findOrCreateUser(user);
     let commands = message.split(/(!dabo|!d)\s*/i)[2];
@@ -98,10 +100,6 @@ module.exports = class Botman {
     let chosenSlot = commands.split(" ")[1];
     let forbiddenSlots = new Set([5, 6, 7, 17, 18, 19, 29, 30, 31]);
 
-    if (chosenAmount == '') {
-      this.sendMessage(channelID, 'You must define an amount ex: !dabo 500', 'red')
-      return
-    }
     if (chosenAmount == 'help') {
       this.sendMessage(channelID, 'See all we know about Dabo here\nhttps://sto.gamepedia.com/Dabo')
       return
@@ -110,9 +108,22 @@ module.exports = class Botman {
       this.sendMessage(channelID, 'See full table of payouts here\nhttps://imgur.com/a/GI80CaF')
       return
     }
+    // if(channelID == "356243839796903947"){
+    //   this.sendMessage(channelID,"Playing forbidden in this chat channel. Try another channel")
+    //   return
+    // }
 
+    if (!/^\s*(\d+)\s*$/.test(chosenAmount)) {
+      this.sendMessage(channelID, 'Invalid command\n!dabo 100 0,1,2 - bet 100 bars on 0,1,2 (total of 300 bars)\n!dabo rules - for rules\n!dabo payouts - for winning combos')
+      return
+    }
     if (typeof chosenSlot == 'undefined') {
       chosenSlot = "0"
+    }
+
+    if(/,$/.test(chosenSlot)){
+      this.sendMessage(channelID, 'Invalid command\n\n!dabo 100 0,1,2 - bet 100 bars on 0,1,2 (total of 300 bars)')
+      return
     }
 
     let playPositions = chosenSlot.split(",")
@@ -123,7 +134,7 @@ module.exports = class Botman {
     chosenAmount = parseInt(chosenAmount)
 
     if(chosenAmount < minimumPlayAmount){
-      this.sendMessage(channelID, 'Minimum play amount is 300', 'red')
+      this.sendMessage(channelID, 'Minimum play amount is ' + minimumPlayAmount, 'red')
       return
     }
 
@@ -132,7 +143,7 @@ module.exports = class Botman {
       return
     }
 
-    if ((users[userIndex].latinum * playPositions.length) < chosenAmount) {
+    if (users[userIndex].latinum  < (chosenAmount * playPositions.length)) {
       this.sendMessage(channelID, 'Not enough Latinum', 'red')
       return
     }
@@ -242,8 +253,6 @@ module.exports = class Botman {
       delete allColors['n'];
       const colors = getMax(allColors);
       const counts = getMax(allCount);
-
-      console.log(allShapes,allColors,allCount)
 
       let innerRowPrefix = wheel[innerWheelRoll]
 
@@ -509,6 +518,11 @@ module.exports = class Botman {
       command = commands.split(" ")[0];
     }
 
+    // if(channelID == "356243839796903947"){
+    //   this.sendMessage(channelID,"Playing forbidden in this chat channel. Try another channel")
+    //   return
+    // }
+
     const activeCommands = {
       shop: () => {
         this.play_command_shop(user, channelID, commands);
@@ -523,10 +537,10 @@ module.exports = class Botman {
         this.play_command_invest_or_scam(user, channelID, command);
       },
       list: () => {
-        this.play_command_list(channelID, user);
+        this.play_command_list(channelID);
       },
       l: () => {
-        this.play_command_list(channelID, user);
+        this.play_command_list(channelID);
       },
       sellsoul: () => {
         this.play_command_sellSoul(user, channelID);
@@ -640,11 +654,9 @@ module.exports = class Botman {
     }
   }
 
-  play_command_list(channelID, user) {
-    let count = 1;
+  play_command_list(channelID) {
     let botMessage = '';
     let userIndex = this.findOrCreateUser(user);
-    this.saveScoresToJSON();
     let usersTable = [
       ['', '', '.'],
       ['#', 'CITIZENS WEALTH', '#'],
@@ -655,7 +667,6 @@ module.exports = class Botman {
         continue;
       }
       usersTable.push([user.username, '', (user.latinum).toLocaleString()]);
-      count++;
     }
 
     let recordHolderTable = [
@@ -1005,7 +1016,6 @@ module.exports = class Botman {
           `${currentUser} ${modifier} ${amount} to/from ${targetUser}`
         );
       } else {
-        console.log("USER", users[userIndex])
         botMessage = `\`\`\`diff\n- Not enough bars of Latinum, you have ${
           users[userIndex].bank.latinum
           }\`\`\``;
@@ -1208,18 +1218,43 @@ module.exports = class Botman {
       this.maxDailyLatinum * 2 +
       " Latinum!" +
       "\n\ncommands:" +
-      "\n!play list/l                 - list all users and their Latinum" +
-      "\n!play dice/d <amount> h/l/7  - feeling lucky? (disabled)" +
-      "\n!play shop/s                 - Go to the shop" +
+      "\n!play list/l           - list users with latinum" +
+      "\n!dabo <amount> <slots> - test your luck on the Dabo wheel" +
+      "\n!play shop/s           - Go to the shop" +
       "\n\nexamples:" +
       "\n!play g 200 Tin    - Gives 200 bars of Latinum to Tin" +
       "\n!play t 100 Lazoul - Takes 50 bars of Latinum from Lazol" +
-      "\n!play d 500 h      - Dices 500 bars of Latinum on High" +
+      "\n!dabo 500 0,1,2    - Dices 500, 1500 in total, bars of Latinum on slots 0,1 and 2" +
       "\n\ndaily commands:" +
-      "\n!play invest       - invest for the whole sector" +
-      "\n!play scam       - scam the whole sector, including yourself" +
-      "\n!play sellsoul/ss - sell your soul (only at 0 Latinum)" +
+      "\n!play invest/scam  - invest or scam the whole sector" +
+      "\n!play sellsoul/ss  - sell your soul (only at 0 Latinum)" +
       "```";
+ 
+
+      // let botMessage = '';
+      // let grandNagusTable = [
+      //   ['', '', '.'],
+      //   ['#', 'GRAND NAGUS', '#'],
+      //   ['', this.getTopLatinumUser().name , ''],
+      //   ['', '', '.']
+      // ];
+  
+      // let commandsTable = [
+      //   ['', '', ''],
+      //   ['#', 'commands', '#'],
+      //   ['!play list/l', '', 'list users with latinum'],
+      //   ['', '', ''],
+      //   ['', '', ''],
+      //   ['', '', ''],
+
+      // ];
+  
+      // let bothTables = [...grandNagusTable, ...commandsTable]
+  
+      // botMessage += codeBlock(table(bothTables, {
+      //   align: ["l", "c", "r"]
+      // }), 'glsl');
+
     return botMessage;
   }
 
