@@ -2,17 +2,27 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 const _DS9 = require('./ds9.class');
 const Warframe = require('./warframe.class');
-const firebase = require('firebase');
-const app = firebase.initializeApp( {
-    
-})
+const DB = require('./db.class');
+// const firebase = require('firebase');
+// require("firebase/firestore");
 
 
 
-
+// var ref = db.ref("users/237259977130115073");
+// const docRef = admin.firestore().collection('users');
+// docRef.get()
+// .then(snapshot => {
+//     let arrayR = snapshot.docs.map(doc => {
+//        return doc.data();
+//     }); 
+//     console.log(arrayR);        
+// }).catch(function(error){
+//     console.log("got an error",error);        
+// })
 
 const DS9 = new _DS9();
 const warframe = new Warframe();
+const db = new DB();
 
 module.exports = class Client {
     constructor(authToken) {
