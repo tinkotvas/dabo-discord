@@ -54,7 +54,22 @@ module.exports = class Client {
             const activeCommands = {
                 /** Warframe Commands */
                 roll: () => {
-                    this.sendMessage(channel, DS9.roll(user))
+                    this.sendMessage(channel, DS9.roll(user), 'purple')
+                },
+                rule: () => {
+                    this.sendMessage(channel, DS9.rules(message), 'purple');
+                },
+                rules: () => {
+                    this.sendMessage(channel, DS9.rules(message), 'purple');
+                },
+                dabo: () => {
+                    DS9.dabo(user, userID, channel, message, this)
+                },
+                l: () => {
+                    DS9.latinum(channel, this)
+                },
+                latinum: () => {
+                    DS9.latinum(channel, this)
                 },
                 /** Warframe Commands */
                 c: () => {

@@ -13,28 +13,38 @@ function msg(m){
 
 module.exports = class DB {
     constructor() {
-        // this.getUser('201004098600828928',msg)
-        this.getUsers(msg);
-        // this.setUser('201004098600828928', {latinum: 666999666}, msg)
-        
+
     }
 
-    getUsers(cb){
-        db.collection('users').get().then(res => {
-            const data = res.docs.map(doc => doc.data())
-            cb(data)
+    static getRules(cb){
+        return db.collection('rules_of_acquisition').doc('0').get().then(res => {
+            cb && cb(res.data())
         }, err => { cb(err) });
     }
 
-    getUser(id, cb){
-        db.collection('users').doc(id).get().then(res => {
-            cb(res.data())
-        })
+    static getUsers(cb){
+        return db.collection('users').get()
+        // .then(res => {
+        //     const data = res.docs.map(doc => doc.data())
+        //     cb && cb(data)
+        // }, err => { cb(err) });
     }
 
-    setUser(id, payload, cb){
+    static getUser(id, cb){
+        return db.collection('users').doc(id).get()
+        // .then(res => {
+        //     cb(res.data())
+        // }, err => {
+        //     err && console.log(err)
+        // })
+    }
+
+    static setUser(id, payload, cb){
         db.collection('users').doc(id).set(payload, {merge: true}).then(res =>{
             // cb(res.isEqual())
+            console.log("res:",res)
+        }, err => {
+            err && console.log(err)
         })
     }
 }
